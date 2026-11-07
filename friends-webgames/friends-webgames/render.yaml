@@ -1,0 +1,9 @@
+# Render Blueprint (선택): 저장소 루트에 두면 "New > Blueprint"로 한 번에 배포할 수 있어요.
+services:
+  - type: web
+    name: friends-webgames
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node server.js
+    healthCheckPath: /healthz
