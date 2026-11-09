@@ -142,31 +142,31 @@
   .cols { display: grid; gap: 16px; grid-template-columns: 1fr; }
   @media (min-width: 900px) { .cols { grid-template-columns: 1fr 1fr; align-items: start; } }
 
-  /* 기밀 폴더 */
+  /* 기밀 폴더 (컴팩트: 장소만 표시) */
   .folder {
-    position: relative; display: block; width: 100%; text-align: left; cursor: pointer; margin: 24px 0 14px;
+    position: relative; display: block; width: 100%; text-align: left; cursor: pointer; margin: 22px 0 12px;
     background: linear-gradient(160deg, var(--manila-lt), var(--manila) 55%, var(--manila-dk));
-    color: var(--ink); border: 0; border-radius: 3px 8px 3px 3px; padding: 18px 20px; min-height: 84px;
-    box-shadow: 0 14px 30px #0009, inset 0 0 0 1px #0002;
+    color: var(--ink); border: 0; border-radius: 3px 8px 3px 3px; padding: 12px 74px 12px 16px; min-height: 56px;
+    box-shadow: 0 10px 22px #0008, inset 0 0 0 1px #0002;
   }
-  .folder::before { /* 폴더 탭 */
-    content: '기밀 문서'; position: absolute; left: 16px; top: -23px; padding: 3px 16px 4px;
-    font-family: var(--display); font-size: 16px; background: var(--manila-dk); border-radius: 6px 6px 0 0; color: var(--ink);
+  .folder::before {
+    content: '기밀 문서'; position: absolute; left: 14px; top: -20px; padding: 2px 14px 3px;
+    font-family: var(--display); font-size: 14px; background: var(--manila-dk); border-radius: 6px 6px 0 0; color: var(--ink);
   }
   .stamp {
-    position: absolute; right: 18px; top: 16px; transform: rotate(-11deg);
-    font-family: var(--display); font-size: 24px; color: var(--stamp); border: 3px solid var(--stamp); padding: 0 10px; border-radius: 4px;
+    position: absolute; right: 14px; top: 12px; transform: rotate(-9deg);
+    font-family: var(--display); font-size: 18px; color: var(--stamp); border: 2px solid var(--stamp); padding: 0 8px; border-radius: 3px;
     opacity: .88; letter-spacing: .12em; pointer-events: none;
   }
-  .folder .closed { display: block; font-family: var(--display); font-size: 22px; margin-top: 2px; }
-  .folder .closed small { display: block; font-family: var(--mono); font-size: 13px; opacity: .7; margin-top: 4px; }
-  .folder .opened { display: none; }
+  .folder .closed { display: block; font-family: var(--display); font-size: 20px; line-height: 32px; }
+  .folder .closed small { font-family: var(--mono); font-size: 13px; opacity: .7; margin-left: 8px; }
+  .folder .opened { display: none; line-height: 32px; }
   .folder.open .closed { display: none; }
   .folder.open .opened { display: block; }
-  .folder .k { font-size: 12.5px; opacity: .7; display: block; margin-top: 10px; }
-  .folder .v { font-family: var(--display); font-size: 32px; line-height: 1.15; display: block; }
-  .folder .v.spy { color: var(--stamp); font-size: 34px; margin-top: 18px; }
-  .folder .note { font-size: 13.5px; margin-top: 8px; }
+  .folder .k { font-size: 13px; opacity: .7; margin-right: 8px; }
+  .folder .v { font-family: var(--display); font-size: 28px; }
+  .folder .v.spy { color: var(--stamp); font-size: 24px; }
+  .folder .sub { font-size: 13px; opacity: .75; margin-left: 8px; }
 
   .big { font-family: var(--display); font-size: 26px; margin: 4px 0 8px; color: var(--manila-lt); }
   .typed { background: rgba(0,0,0,.28); border-left: 3px solid var(--manila-dk); padding: 8px 12px; margin: 0 0 10px; word-break: break-word; }
@@ -197,8 +197,6 @@
   .overlay { position: fixed; inset: 0; background: rgba(8,10,16,.76); display: grid; place-items: center; padding: 16px; z-index: 40; overflow-y: auto; }
   .modal { width: 100%; max-width: 480px; }
   .modal .close { float: right; }
-  .vlist { display: grid; gap: 4px; margin: 10px 0; font-size: 14px; }
-  .vtimer { font-family: var(--display); font-size: 28px; }
 
   .banner { position: sticky; top: 0; z-index: 50; background: var(--stamp); color: #fff; text-align: center; padding: 6px 10px; font-size: 14px; }
   .toast { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom)); transform: translateX(-50%); background: var(--manila); color: var(--ink); padding: 10px 18px; border-radius: 4px; z-index: 60; box-shadow: 0 8px 24px #0009; max-width: 90vw; font-weight: 700; font-size: 14px; }
@@ -240,6 +238,40 @@
 
   /* 채팅 */
   .chat { display: flex; flex-direction: column; height: 360px; padding: 0; overflow: hidden; }
+  .msg.sys { color: var(--manila); font-size: 13.5px; padding: 6px 10px; margin: 4px 0 8px; background: rgba(220,203,148,.1); border-left: 3px solid var(--manila-dk); }
+
+  /* 투표 바 (화면을 가리지 않고 상단에 고정) */
+  .votebar { position: sticky; top: 0; z-index: 35; margin: 0 0 12px; padding: 12px 14px; background: #3f3417; color: var(--text);
+    border: 1px solid var(--manila-dk); border-left: 5px solid var(--manila); border-radius: 4px; box-shadow: 0 8px 22px #000a; animation: vbpulse 1.2s ease-out 1; }
+  @keyframes vbpulse { 0% { box-shadow: 0 0 0 0 rgba(220,203,148,.8), 0 8px 22px #000a; } 100% { box-shadow: 0 0 0 14px rgba(220,203,148,0), 0 8px 22px #000a; } }
+  .vb-head { font-size: 16px; display: flex; align-items: center; gap: 8px; }
+  .vb-time { margin-left: auto; font-family: var(--display); font-size: 20px; color: var(--manila-lt); }
+  .vb-body { margin: 6px 0 8px; font-size: 14.5px; }
+  .vb-body small { color: var(--dim); font-size: 12.5px; }
+  .vb-voters { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+  .vchip { padding: 2px 10px; border: 1px solid var(--c, #888); border-radius: 99px; font-size: 13.5px; color: var(--c, #ddd); background: rgba(0,0,0,.25); }
+  .vchip.yes { background: rgba(95,211,141,.14); }
+  .vchip.no { background: rgba(255,138,128,.2); }
+  .vchip small { color: var(--dim); }
+  .vb-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+
+  /* 모바일 탭 (PC에서는 숨김) */
+  .tabs { display: none; }
+  .tabs button { flex: 1; padding: 9px 10px; border: 1px solid rgba(214,219,230,.22); background: rgba(0,0,0,.28); color: var(--text); border-radius: 4px; cursor: pointer; font-weight: 700; }
+  .tabs button.on { background: var(--manila); color: var(--ink); border-color: var(--manila); }
+  .badge { display: inline-block; min-width: 20px; padding: 0 6px; margin-left: 4px; border-radius: 99px; background: var(--stamp); color: #fff; font-size: 12px; line-height: 20px; }
+  @media (min-width: 980px) {
+    .only-mobile { display: none; }
+    .side { position: sticky; top: 12px; }
+    .chat { height: calc(100vh - 150px); min-height: 420px; max-height: 760px; }
+  }
+  @media (max-width: 979px) {
+    .tabs { display: flex; gap: 8px; position: sticky; top: 0; z-index: 36; padding: 8px 0; background: var(--desk); }
+    .votebar { top: 54px; }
+    #game[data-tab="game"] .side { display: none; }
+    #game[data-tab="chat"] .players, #game[data-tab="chat"] .actionbar, #game[data-tab="chat"] #stage { display: none; }
+    .chat { height: 70vh; height: calc(100dvh - 210px); min-height: 320px; }
+  }
   .chat h3 { margin: 0; padding: 12px 14px 8px; }
   .chatlog { flex: 1; overflow-y: auto; padding: 4px 14px 10px; font-size: 14px; }
   .msg { margin-bottom: 6px; word-break: break-word; }
@@ -289,14 +321,19 @@
         <li>입장하면 <em>게임 준비</em>를 눌러요. 준비한 사람이 3명 이상이면 준비한 누구든 시작할 수 있어요.</li>
         <li>판이 진행 중일 때 들어오면 <em>관전</em>부터 시작해요. 준비를 눌러 두면 다음 판부터 참여해요.</li>
         <li>차례인 사람은 받은 질문에 <em>답하고</em>, 다음 질문 상대를 지목해 질문해요. (A→B→C→D…) 방금 나에게 질문한 사람에게는 바로 되물을 수 없어요.</li>
-        <li>수상한 사람은 참가자라면 누구나 한 번씩 <em>지목 투표</em>를 열 수 있어요. 지목된 사람을 뺀 참가자의 과반이 찬성하면 확정돼요.</li>
+        <li>수상한 사람은 참가자라면 누구나 한 번씩 <em>지목 투표</em>를 열 수 있어요. 지목된 사람을 뺀 참가자 <em>전원이 찬성</em>해야 확정되고, 누가 어떻게 투표했는지 모두에게 공개돼요.</li>
         <li>스파이는 언제든 <em>장소를 맞혀</em> 볼 수 있어요. 맞히면 승리, 틀리면 패배! 제한 시간은 <em>8분</em>이에요.</li>
         <li>질문 사이사이 <em>전체 채팅</em>으로 마음껏 떠들어도 좋아요.</li>
       </ol>
     </div>
   </section>
 
-  <section id="game" hidden>
+  <section id="game" data-tab="game" hidden>
+    <nav class="tabs" id="tabs">
+      <button class="on" data-tab="game">🎮 게임</button>
+      <button data-tab="chat">💬 채팅 <span class="badge" id="chatBadge" hidden>0</span></button>
+    </nav>
+    <div class="votebar" id="votebar" hidden></div>
     <div class="players" id="players"></div>
     <div class="actionbar" id="actionbar"></div>
     <div class="layout">
@@ -310,7 +347,6 @@
             <button class="btn small" type="submit">보내기</button>
           </form>
         </div>
-        <div id="sideBottom"></div>
       </aside>
     </div>
   </section>
@@ -331,7 +367,8 @@
   const BASE_TITLE = '스파이폴';
 
   let S = null, offset = 0;
-  let stageKey = '', turnSig = '', threadSig = '', modalKey = null;
+  let stageKey = '', turnSig = '', threadSig = '', modalKey = null, voteKey = '';
+  let chatTab = 'game', unread = 0;
   let local = null;               // 'accuse' | 'guess'
   let resultDismissed = -1;
   let strike = new Set(), seenGame = -1, cardOpen = false, guessPick = '';
@@ -359,6 +396,8 @@
     S = null; stageKey = ''; turnSig = ''; threadSig = ''; modalKey = null; local = null;
     $('#lobby').hidden = false; $('#game').hidden = true; $('#roomtag').hidden = true; $('#overlay').hidden = true;
     $('#chatlog').innerHTML = '';
+    $('#votebar').hidden = true; voteKey = '';
+    unread = 0; updateBadge(); setTab('game');
     document.title = BASE_TITLE;
     history.replaceState(null, '', location.pathname);
   }
@@ -426,6 +465,7 @@
     showGame();
     renderPlayers();
     renderActionBar();
+    renderVoteBar();
     const key = `${s.phase}:${s.gameNo}:${s.me && s.me.spectator ? 's' : 'g'}`;
     if (key !== stageKey) { stageKey = key; turnSig = ''; threadSig = ''; buildStage(); }
     if (s.phase === 'playing') { updateChain(); updateTurn(); updateButtons(); }
@@ -480,10 +520,8 @@
 
   function buildStage() {
     const el = $('#stage');
-    const side = $('#sideBottom');
-    side.innerHTML = '';
     if (S.phase === 'waiting') el.innerHTML = waitingHTML();
-    else if (S.phase === 'playing') { el.innerHTML = playingHTML(); side.innerHTML = locationsHTML(); }
+    else if (S.phase === 'playing') el.innerHTML = playingHTML();
     else el.innerHTML = endedHTML();
     bindStage();
   }
@@ -496,7 +534,7 @@
       </div>
       <div class="panel">
         <h3>진행 방법</h3>
-        <p class="hint" style="margin-top:0">시민은 같은 장소와 역할을 받고, 스파이는 장소를 몰라요. 차례대로 질문과 답변을 이어가고(A→B→C→D…), 수상한 사람은 투표로 지목해요. 제한 시간은 8분이에요. 오른쪽 채팅으로 자유롭게 떠들 수 있어요.</p>
+        <p class="hint" style="margin-top:0">시민은 같은 장소를 받고, 스파이는 장소를 몰라요. 차례대로 질문과 답변을 이어가고(A→B→C→D…), 수상한 사람은 투표로 지목해요(참가자 전원이 찬성해야 확정). 제한 시간은 8분이에요. 채팅으로 자유롭게 떠들 수 있어요.</p>
       </div>`;
   }
 
@@ -509,8 +547,9 @@
         ${spectator ? '' : '<button class="btn danger" id="btnAccuse">스파이 지목</button>'}
         ${!spectator && S.me && S.me.isSpy ? '<button class="btn" id="btnGuess">장소 맞추기</button>' : ''}
       </div>
-      <div class="chain" id="chain"></div>
       <div id="roleCard"></div>
+      ${locationsHTML()}
+      <div class="chain" id="chain"></div>
       <div class="panel" id="turnPanel"></div>
       <div class="panel"><h3>질문 · 대답 기록</h3><div class="thread" id="thread"></div></div>`;
   }
@@ -522,7 +561,7 @@
   }
 
   function locationsHTML() {
-    return `<div class="panel"><h3>장소 목록</h3>
+    return `<div class="panel"><h3>장소 후보</h3>
       <p class="hint" style="margin-top:0">탭하면 줄이 그어져요. (나에게만 보여요)</p>
       <div class="locs" id="locGrid">${S.locations.map((l) => `<button class="loc" data-loc="${esc(l)}">${esc(l)}</button>`).join('')}</div></div>`;
   }
@@ -530,18 +569,15 @@
   function roleCardHTML() {
     const me = S.me;
     if (me.spectator) {
-      return `<div class="panel spec-card"><h3>👀 관전 중</h3>
-        <p class="hint" style="margin:0">이번 판은 지켜보는 중이에요. 장소와 스파이는 판이 끝나야 공개돼요. 위에서 <b>다음 판 참가 준비</b>를 눌러 두면 다음 판부터 함께해요.</p></div>`;
+      return `<div class="panel spec-card"><b>👀 관전 중</b>
+        <span class="hint"> 이번 판은 지켜보는 중이에요. 장소와 스파이는 판이 끝나야 공개돼요.</span></div>`;
     }
     const inner = me.isSpy
-      ? `<span class="v spy">당신은 스파이입니다</span>
-         <p class="note">장소를 모릅니다. 질문에 자연스럽게 섞여 단서를 모으고, 확신이 서면 ‘장소 맞추기’를 선언하세요.</p>`
-      : `<span class="k">장소</span><span class="v">${esc(me.location)}</span>
-         <span class="k">나의 역할</span><span class="v" style="font-size:26px">${esc(me.role)}</span>
-         <p class="note">장소 이름을 직접 말하지 않고, 스파이가 눈치채지 못하게 질문하고 답하세요.</p>`;
+      ? `<span class="v spy">당신은 스파이입니다</span><span class="sub">장소를 몰라요</span>`
+      : `<span class="k">장소</span><span class="v">${esc(me.location)}</span>`;
     return `<div class="folder ${cardOpen ? 'open' : ''}" id="folder" role="button" tabindex="0" aria-expanded="${cardOpen}">
         <span class="stamp">극비</span>
-        <span class="closed">내 비밀 문서<small>탭해서 열기 · 다시 탭하면 가려져요</small></span>
+        <span class="closed">내 비밀 문서<small>탭해서 확인</small></span>
         <span class="opened">${inner}</span>
       </div>`;
   }
@@ -599,7 +635,7 @@
 
   function updateTurn() {
     const gamerIds = S.players.filter((p) => p.inGame).map((p) => p.id).join(',');
-    const sig = [S.turnId, S.lastAskerId, S.pending ? S.pending.n : 0, gamerIds, S.me && S.me.spectator ? 's' : 'g', S.vote ? 'v' : ''].join('|');
+    const sig = [S.turnId, S.lastAskerId, S.pending ? S.pending.n : 0, gamerIds, S.me && S.me.spectator ? 's' : 'g'].join('|');
     if (sig === turnSig) return;
     turnSig = sig;
     const el = $('#turnPanel');
@@ -675,35 +711,55 @@
     const r = S.result;
     const cls = r.winner === 'spy' ? 'spy' : r.winner === 'citizens' ? 'citizens' : '';
     const title = r.winner === 'spy' ? '스파이 승리' : r.winner === 'citizens' ? '시민 승리' : '게임 중단';
+    const list = r.players.map((x) => `<tr class="${x.isSpy ? 'spyrow' : ''}"><td>${nmDot(x)}</td><td>${x.isSpy ? '스파이' : '시민'}</td></tr>`).join('');
+    const votes = r.voteRows
+      ? `<p class="hint" style="color:#5d5738;margin:14px 0 4px">${esc(r.accusedName)}님 지목 투표 기록</p>
+         <table class="roles">${r.voteRows.map((x) => `<tr><td>${nmDot(x)}</td><td>${x.vote === true ? '✅ 찬성' : x.vote === false ? '❌ 반대' : '⏳ 미투표'}</td></tr>`).join('')}</table>`
+      : '';
     return `<div class="result ${cls}">
         <p class="verdict">${title}</p>
         <p>${esc(r.reason)}</p>
         <dl><dt>스파이</dt><dd>${esc(r.spyName)}</dd><dt>장소</dt><dd>${esc(r.location)}</dd></dl>
-        <table class="roles">${r.roles.map((x) => `<tr class="${x.id === r.spyId ? 'spyrow' : ''}"><td>${nmDot(x)}</td><td>${esc(x.role)}</td></tr>`).join('')}</table>
+        <table class="roles">${list}</table>${votes}
       </div>`;
   }
 
-  function voteHTML() {
-    const v = S.vote;
-    const who = (id) => { const p = pById(id); return p ? nmDot(p) : '?'; };
-    const agree = v.eligible.filter((id) => v.votes[id] === true).length;
-    const disagree = v.eligible.filter((id) => v.votes[id] === false).length;
-    const need = Math.floor(v.eligible.length / 2) + 1;
-    const accused = v.accusedId === S.you;
+  /* 투표 바: 화면을 가리지 않고 상단에 고정. 채팅으로 토론한 뒤 투표 */
+  function renderVoteBar() {
+    const el = $('#votebar');
+    const v = S && S.vote;
+    if (!v) { if (voteKey) { voteKey = ''; el.hidden = true; el.innerHTML = ''; } return; }
     const spectator = S.me && S.me.spectator;
-    const mine = v.votes[S.you];
-    const canVote = v.eligible.includes(S.you) && mine === undefined;
-    return `<div class="paper">
-      <h2>스파이 지목 투표</h2>
-      <p>${who(v.accuserId)}님이 ${who(v.accusedId)}님을 스파이로 지목했어요.</p>
-      <div class="vtimer" id="vclock">30</div>
-      <p class="hint" style="color:#5d5738">과반(${need}명 이상) 찬성이면 확정 · 현재 찬성 ${agree} / 반대 ${disagree}</p>
-      <div class="vlist">${v.eligible.map((id) => `<div>${v.votes[id] === true ? '✅ 찬성' : v.votes[id] === false ? '❌ 반대' : '⏳ 대기'} — ${who(id)}</div>`).join('')}</div>
-      ${spectator ? '<p class="hint" style="color:#5d5738">관전 중이라 투표할 수 없어요.</p>'
-        : accused ? '<p><b>당신이 지목되었어요.</b> 투표가 끝날 때까지 침착하게 해명해 보세요.</p>'
-        : canVote ? '<div class="actions"><button class="btn primary" data-agree="1">찬성</button><button class="btn" data-agree="0">반대</button></div>'
-        : '<p class="hint" style="color:#5d5738">투표를 마쳤어요. 결과를 기다리는 중…</p>'}
-    </div>`;
+    const key = JSON.stringify([v.accuserId, v.accusedId, v.votes, !!spectator]);
+    if (key === voteKey) return;
+    voteKey = key;
+    const who = (id) => { const p = pById(id); return p ? nm(p) : '?'; };
+    const accused = v.accusedId === S.you;
+    const canVote = v.eligible.includes(S.you) && v.votes[S.you] === undefined;
+    const chips = v.eligible.map((id) => {
+      const val = v.votes[id];
+      const p = pById(id);
+      if (!p) return '';
+      return `<span class="vchip ${val === true ? 'yes' : val === false ? 'no' : ''}" style="--c:${esc(p.color)}">${val === true ? '✅' : val === false ? '❌' : '⏳'} ${esc(p.avatar)} ${esc(p.name)}${id === v.accuserId ? ' <small>지목자</small>' : ''}</span>`;
+    }).join('');
+    let action;
+    if (spectator) action = '<span class="hint">관전 중이라 투표할 수 없어요.</span>';
+    else if (accused) action = '<span><b>당신이 지목되었어요.</b> 채팅으로 해명해 보세요.</span>';
+    else if (canVote) action = '<button class="btn primary small" data-vote="1">찬성</button><button class="btn small" data-vote="0">반대</button>';
+    else action = '<span class="hint">투표를 마쳤어요. 다른 사람을 기다리는 중…</span>';
+    el.hidden = false;
+    el.innerHTML = `<div class="vb-head">🗳 <b>스파이 지목 투표 진행 중</b><span class="vb-time" id="vbTime"></span></div>
+      <div class="vb-body">${who(v.accuserId)}님이 ${who(v.accusedId)}님을 스파이로 지목했어요.<br>
+        <small>참가자 <b>전원이 찬성</b>해야 확정돼요. 한 명이라도 반대하면 바로 부결! 서두르지 말고 채팅으로 먼저 이야기해 보세요. 질문은 투표가 끝날 때까지 잠시 멈춰요.</small></div>
+      <div class="vb-voters">${chips}</div>
+      <div class="vb-actions">${action}<button class="btn small ghost only-mobile" id="vbChat">💬 채팅으로 토론하기</button></div>`;
+    document.querySelectorAll('#votebar [data-vote]').forEach((b) => (b.onclick = async () => {
+      const r = await call('spy_vote', { agree: b.dataset.vote === '1' });
+      if (!r.ok) toast(r.error);
+    }));
+    const vc = $('#vbChat');
+    if (vc) vc.onclick = () => setTab('chat');
+    tick();
   }
 
   function renderModal() {
@@ -712,14 +768,11 @@
       key = `res:${S.gameNo}`;
       html = `<div class="paper">${resultHTML()}<div class="actions"><button class="btn primary" id="mClose">확인</button>
         <span class="hint" style="color:#5d5738">확인 후 게임 준비를 눌러 다음 판을 시작하세요.</span></div></div>`;
-    } else if (S && S.vote) {
-      key = `vote:${S.vote.accuserId}:${S.vote.accusedId}:${JSON.stringify(S.vote.votes)}`;
-      html = voteHTML();
     } else if (S && local === 'accuse' && S.phase === 'playing') {
       key = 'accuse';
       const opts = S.players.filter((p) => p.inGame && p.id !== S.you).map((p) => `<option value="${esc(p.id)}">${esc(p.avatar + ' ' + p.name)}</option>`).join('');
       html = `<div class="paper"><h2>스파이 지목</h2>
-        <p class="hint" style="color:#5d5738;margin-top:0">지목은 한 사람당 한 번만 할 수 있어요. 지목된 사람을 뺀 참가자의 과반이 찬성하면 확정돼요.</p>
+        <p class="hint" style="color:#5d5738;margin-top:0">지목은 한 사람당 한 번만 할 수 있어요. 지목된 사람을 뺀 참가자 <b>전원이 찬성</b>해야 확정돼요. 투표하는 동안 채팅으로 충분히 이야기할 수 있어요.</p>
         <label>지목할 사람<select id="accSel">${opts}</select></label>
         <div class="actions"><button class="btn primary" id="accGo">투표 열기</button><button class="btn" id="mCancel">취소</button></div></div>`;
     } else if (S && local === 'guess' && S.phase === 'playing') {
@@ -759,28 +812,51 @@
     }));
   }
 
-  /* ───────── 채팅 ───────── */
-  function addMsg(m) {
+  /* ───────── 채팅 / 모바일 탭 ───────── */
+  const isMobile = () => typeof matchMedia === 'function' && matchMedia('(max-width: 979px)').matches;
+  function updateBadge() {
+    const b = $('#chatBadge');
+    b.hidden = unread <= 0;
+    b.textContent = unread > 99 ? '99+' : String(unread);
+  }
+  function setTab(t) {
+    chatTab = t;
+    $('#game').dataset.tab = t;
+    document.querySelectorAll('#tabs button').forEach((b) => b.classList.toggle('on', b.dataset.tab === t));
+    if (t === 'chat') { unread = 0; updateBadge(); $('#chatlog').scrollTop = 1e9; }
+    else window.scrollTo && window.scrollTo(0, 0);
+  }
+  document.querySelectorAll('#tabs button').forEach((b) => (b.onclick = () => setTab(b.dataset.tab)));
+
+  function addMsg(m, silent) {
     const log = $('#chatlog');
     const d = document.createElement('div');
-    d.className = 'msg';
-    const b = document.createElement('b');
-    b.style.color = m.color;
-    b.textContent = `${m.avatar} ${m.name}`;
-    d.append(b);
-    if (m.spectator) {
-      const t = document.createElement('small');
-      t.className = 'spec';
-      t.textContent = ' (관전)';
-      d.append(t);
+    if (m.sys) {
+      d.className = 'msg sys';
+      d.textContent = m.text;
+    } else {
+      d.className = 'msg';
+      const b = document.createElement('b');
+      b.style.color = m.color;
+      b.textContent = `${m.avatar} ${m.name}`;
+      d.append(b);
+      if (m.spectator) {
+        const t = document.createElement('small');
+        t.className = 'spec';
+        t.textContent = ' (관전)';
+        d.append(t);
+      }
+      d.append(document.createTextNode(` ${m.text}`));
     }
-    d.append(document.createTextNode(` ${m.text}`));
     const stick = log.scrollTop + log.clientHeight >= log.scrollHeight - 30;
     log.appendChild(d);
     if (stick) log.scrollTop = log.scrollHeight;
+    // 모바일에서 게임 탭을 보고 있을 때 온 메시지는 안 읽은 수로 표시 (내가 보낸 건 제외)
+    const me = S && pById(S.you);
+    if (!silent && isMobile() && chatTab !== 'chat' && !(me && !m.sys && m.name === me.name)) { unread++; updateBadge(); }
   }
-  socket.on('spy_chatlog', (arr) => { $('#chatlog').innerHTML = ''; arr.forEach(addMsg); $('#chatlog').scrollTop = 1e9; });
-  socket.on('spy_chat', addMsg);
+  socket.on('spy_chatlog', (arr) => { $('#chatlog').innerHTML = ''; arr.forEach((m) => addMsg(m, true)); $('#chatlog').scrollTop = 1e9; });
+  socket.on('spy_chat', (m) => addMsg(m));
   $('#chatform').addEventListener('submit', (e) => {
     e.preventDefault();
     const v = $('#chatInput').value.trim();
@@ -801,8 +877,8 @@
       gc.classList.toggle('urgent', left <= 60);
       $('#gbar').style.width = `${Math.min(100, (left / S.gameSec) * 100)}%`;
     }
-    const vc = $('#vclock');
-    if (vc && S.vote) vc.textContent = Math.max(0, Math.ceil((S.vote.endsAt - now) / 1000)) + '초';
+    const vt = $('#vbTime');
+    if (vt && S.vote) vt.textContent = `남은 시간 ${Math.max(0, Math.ceil((S.vote.endsAt - now) / 1000))}초`;
   }
   setInterval(tick, 250);
 })();
