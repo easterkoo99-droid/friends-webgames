@@ -3,23 +3,24 @@
  * 스파이폴 - 추리/심리전 게임 (서버)
  *
  * 규칙
- *  - 한 판에 3~8명 참가. 한 명이 스파이, 나머지는 같은 장소 + 각자 역할을 받음
+ *  - 한 판에 3~8명 참가. 한 명이 스파이, 나머지 시민은 같은 장소를 받음 (역할/직업은 없음)
  *  - 입장한 사람은 '게임 준비'를 눌러야 참가자가 됨. 준비한 사람이 3명 이상이면 준비한 누구든 시작 가능
  *  - 게임 도중에 들어온 사람은 관전자. 준비를 눌러 두면 다음 판부터 참가
  *  - 차례인 사람이 앞선 질문에 답하고, 다음 질문 상대를 지목해 질문 (A→B→C→D…)
  *    직전에 나에게 질문한 사람에게는 바로 되물을 수 없음
- *  - 참가자는 (1인 1회) 스파이 지목 투표를 열 수 있음 - 지목 대상을 뺀 참가자의 과반 찬성 시 확정
+ *  - 참가자는 (1인 1회) 스파이 지목 투표를 열 수 있음 - 지목 대상을 뺀 참가자 '전원'이 찬성해야 확정
+ *    (한 명이라도 반대하면 즉시 부결, 시간 안에 전원 찬성이 안 되어도 부결). 누가 어떻게 투표했는지 모두에게 공개
  *  - 스파이는 언제든 장소를 맞춰볼 수 있음 (정답이면 스파이 승, 오답이면 시민 승)
  *  - 8분이 지나면 스파이 승
  */
-const { makeCode, makeToken, makeId, cleanName, cleanText, shuffle, pick } = require('./util');
+const { makeCode, makeToken, makeId, cleanName, cleanText, pick } = require('./util');
 
 const CFG = {
   MIN_PLAYERS: 3,   // 한 판 최소 인원
   MAX_PLAYERS: 8,   // 한 판 최대 인원
   MAX_ROOM: 10,     // 관전자 포함 방 정원
   GAME_SEC: 8 * 60,
-  VOTE_SEC: 30,
+  VOTE_SEC: 90,     // 채팅으로 토론할 시간
   DROP_GRACE_MS: 25000,
   ROOM_TTL_MS: 10 * 60 * 1000,
   CHAT_KEEP: 80,
@@ -29,30 +30,29 @@ const AVATARS = ['🕵️', '🎩', '🕶️', '🧥', '🗝️', '📻', '🔦'
 // 어두운 배경에서 서로 구별되는 닉네임 색상
 const COLORS = ['#ff8a80', '#ffb74d', '#ffe14d', '#c6e377', '#5fd38d', '#3fc7c0', '#5bc0f8', '#8e9bff', '#c58bff', '#ff7eb6'];
 
-const LOCATIONS = [
-  { name: '카지노', roles: ['딜러', '도박꾼', '경비원', '바텐더', '칵테일 웨이트리스', 'VIP 손님', '매니저', '관광객'] },
-  { name: '해수욕장', roles: ['인명구조원', '서퍼', '아이스크림 장수', '관광객', '사진작가', '파라솔 대여업자', '어린이', '선탠하는 사람'] },
-  { name: '우주정거장', roles: ['선장', '엔지니어', '과학자', '우주 관광객', '의사', '통신 담당', '요리사', '정비사'] },
-  { name: '병원', roles: ['외과 의사', '간호사', '환자', '응급구조사', '약사', '인턴', '환자 보호자', '원무과 직원'] },
-  { name: '학교', roles: ['선생님', '학생', '교장', '급식 조리사', '체육 교사', '수위', '사서', '전학생'] },
-  { name: '경찰서', roles: ['형사', '순경', '용의자', '변호사', '피해자', '서장', '민원인', '감식 요원'] },
-  { name: '은행', roles: ['은행원', '고객', '경비원', '지점장', '대출 상담원', '강도', '현금수송 기사', '청소 직원'] },
-  { name: '비행기', roles: ['기장', '승무원', '승객', '정비사', '항공 보안관', '어린이 승객', '비즈니스석 승객', '기내식 담당'] },
-  { name: '영화관', roles: ['매점 직원', '관객', '영사기사', '커플', '매표원', '영화 평론가', '청소 직원', '감독'] },
-  { name: '레스토랑', roles: ['셰프', '웨이터', '손님', '설거지 담당', '소믈리에', '음식 평론가', '지배인', '배달 기사'] },
-  { name: '놀이공원', roles: ['롤러코스터 운전원', '마스코트 인형탈', '가족 여행객', '매표원', '청소 직원', '소매치기', '놀이기구 정비사', '연인'] },
-  { name: '도서관', roles: ['사서', '대학원생', '조용히 시키는 직원', '노트북 작업자', '어린이', '자원봉사자', '작가', '책 연체자'] },
-  { name: '군부대', roles: ['사령관', '병사', '저격수', '군의관', '통신병', '취사병', '신병', '정찰병'] },
-  { name: '기차', roles: ['차장', '승객', '매점 판매원', '검표원', '기관사', '배낭여행객', '식당칸 요리사', '무임승차자'] },
-  { name: '서커스', roles: ['곡예사', '광대', '사자 조련사', '마술사', '관객', '단장', '매표원', '공중그네 곡예사'] },
-  { name: '해적선', roles: ['선장', '항해사', '요리사', '포로', '갑판장', '대포 담당', '망보는 선원', '선상 의사'] },
-  { name: '잠수함', roles: ['함장', '소나 담당', '어뢰병', '엔지니어', '요리사', '부함장', '통신병', '의무병'] },
-  { name: '호텔', roles: ['벨보이', '프런트 직원', '투숙객', '청소 직원', '지배인', '컨시어지', '경비원', '신혼부부'] },
-  { name: 'PC방', roles: ['알바생', '게이머', '사장님', '초등학생', '대회 준비 팀', '라면 먹는 손님', '야간 단골', '수리 기사'] },
-  { name: '찜질방', roles: ['세신사', '아이', '아빠', '매점 직원', '수면실 손님', '관리인', '커플', '단체 손님'] },
-  { name: '캠핑장', roles: ['사장님', '초보 캠퍼', '고수 캠퍼', '아이들', '불멍 담당', '야간 순찰', '바비큐 담당', '혼캠족'] },
+const LOCATION_NAMES = [
+  '카지노',
+  '해수욕장',
+  '우주정거장',
+  '병원',
+  '학교',
+  '경찰서',
+  '은행',
+  '비행기',
+  '영화관',
+  '레스토랑',
+  '놀이공원',
+  '도서관',
+  '군부대',
+  '기차',
+  '서커스',
+  '해적선',
+  '잠수함',
+  '호텔',
+  'PC방',
+  '찜질방',
+  '캠핑장',
 ];
-const LOCATION_NAMES = LOCATIONS.map((l) => l.name);
 
 module.exports = function registerSpyfall(io) {
   const rooms = new Map();
@@ -60,6 +60,14 @@ module.exports = function registerSpyfall(io) {
   const gamersOf = (room) => room.players.filter((p) => p.inGame);
   const nameOf = (room, id) => (room.players.find((p) => p.id === id) || {}).name || '?';
   const pushSys = (room, text) => room.thread.push({ type: 'sys', text, t: Date.now() });
+
+  // 모두에게 보이는 시스템 채팅 (투표 시작/결과 등)
+  function pushChatSys(room, text) {
+    const msg = { sys: true, text, t: Date.now() };
+    room.chat.push(msg);
+    if (room.chat.length > CFG.CHAT_KEEP) room.chat.shift();
+    io.to(`spy:${room.code}`).emit('spy_chat', msg);
+  }
 
   function lastQa(room) {
     for (let i = room.thread.length - 1; i >= 0; i--) if (room.thread[i].type === 'qa') return room.thread[i];
@@ -113,7 +121,7 @@ module.exports = function registerSpyfall(io) {
       canAccuse: room.phase === 'playing' && isGamer && !room.vote && !room.accusers.has(pid),
       me: started && me
         ? (isGamer
-          ? { spectator: false, isSpy, location: isSpy ? null : room.location.name, role: isSpy ? null : me.role }
+          ? { spectator: false, isSpy, location: isSpy ? null : room.location }
           : { spectator: true })
         : null,
       locations: LOCATION_NAMES,
@@ -130,16 +138,10 @@ module.exports = function registerSpyfall(io) {
 
   /* ───────── 게임 진행 ───────── */
   function startGame(room, gamers) {
-    const loc = pick(LOCATIONS);
+    const loc = pick(LOCATION_NAMES);
     const spy = pick(gamers);
-    const roles = shuffle(loc.roles);
-    let ri = 0;
     room.players.forEach((p) => {
       p.inGame = gamers.includes(p);
-      p.role = null;
-    });
-    gamers.forEach((p) => {
-      if (p.id !== spy.id) p.role = roles[ri++ % roles.length];
     });
     room.phase = 'playing';
     room.gameNo += 1;
@@ -159,7 +161,7 @@ module.exports = function registerSpyfall(io) {
     broadcast(room);
   }
 
-  function endGame(room, winner, reason) {
+  function endGame(room, winner, reason, extra = {}) {
     if (room.phase !== 'playing') return;
     clearTimeout(room.timer);
     if (room.vote) clearTimeout(room.vote.timer);
@@ -171,16 +173,18 @@ module.exports = function registerSpyfall(io) {
       reason,
       spyId: room.spyId,
       spyName: nameOf(room, room.spyId),
-      location: room.location.name,
-      roles: gamersOf(room).map((p) => ({
-        id: p.id, name: p.name, avatar: p.avatar, color: p.color, role: p.id === room.spyId ? '스파이' : p.role,
+      location: room.location,
+      players: gamersOf(room).map((p) => ({
+        id: p.id, name: p.name, avatar: p.avatar, color: p.color, isSpy: p.id === room.spyId,
       })),
+      accusedName: extra.accusedName || null,
+      voteRows: extra.voteRows || null,
     };
     pushSys(room, '게임 종료');
     broadcast(room);
   }
 
-  /* ───────── 투표 ───────── */
+  /* ───────── 투표 (전원 찬성) ───────── */
   function tally(room) {
     const v = room.vote;
     const agree = v.eligible.filter((id) => v.votes[id] === true).length;
@@ -188,29 +192,47 @@ module.exports = function registerSpyfall(io) {
     return { agree, disagree, n: v.eligible.length };
   }
 
+  function voteRowsOf(room, v) {
+    return v.eligible.map((id) => {
+      const p = room.players.find((x) => x.id === id) || {};
+      return {
+        id, name: p.name || '?', avatar: p.avatar || '', color: p.color || '#999',
+        vote: v.votes[id] === undefined ? null : v.votes[id],
+      };
+    });
+  }
+
   function settleVote(room, passed) {
     const v = room.vote;
     if (!v) return;
     clearTimeout(v.timer);
-    const accusedName = nameOf(room, v.accusedId);
+    const rows = voteRowsOf(room, v);
+    const accused = room.players.find((p) => p.id === v.accusedId);
+    const accusedName = accused ? accused.name : '?';
+    const names = (val) => rows.filter((r) => r.vote === val).map((r) => r.name).join(', ') || '없음';
+    const summary = `투표 결과 — 찬성: ${names(true)} / 반대: ${names(false)}${rows.some((r) => r.vote === null) ? ` / 미투표: ${names(null)}` : ''} → ${passed ? '가결' : '부결'}`;
     room.vote = null;
+    pushSys(room, summary);
+    pushChatSys(room, `🗳 ${summary}`);
     if (!passed) {
-      pushSys(room, `${accusedName}님 지목 투표가 부결되었어요. 게임을 계속합니다.`);
+      pushSys(room, `${accusedName}님 지목이 부결되었어요. 게임을 계속합니다.`);
       return broadcast(room);
     }
+    const extra = { voteRows: rows, accusedName };
     if (v.accusedId === room.spyId) {
-      endGame(room, 'citizens', `과반수가 지목한 ${accusedName}님이 진짜 스파이였어요!`);
+      endGame(room, 'citizens', `전원이 찬성해 지목한 ${accusedName}님이 진짜 스파이였어요!`, extra);
     } else {
-      endGame(room, 'spy', `${accusedName}님은 시민이었어요. 무고한 사람을 지목해 스파이가 승리했습니다.`);
+      endGame(room, 'spy', `${accusedName}님은 시민이었어요. 무고한 사람을 지목해 스파이가 승리했습니다.`, extra);
     }
   }
 
+  // 만장일치: 한 명이라도 반대하면 즉시 부결, 전원 찬성이면 가결, 시간이 끝나면 부결
   function checkVote(room, timedOut = false) {
     if (!room.vote) return;
     const { agree, disagree, n } = tally(room);
-    if (agree * 2 > n) return settleVote(room, true);
-    if (disagree * 2 >= n) return settleVote(room, false);
-    if (timedOut || agree + disagree >= n) return settleVote(room, agree * 2 > n);
+    if (disagree > 0) return settleVote(room, false);
+    if (agree >= n) return settleVote(room, true);
+    if (timedOut) return settleVote(room, false);
     broadcast(room);
   }
 
@@ -298,7 +320,6 @@ module.exports = function registerSpyfall(io) {
       color: COLORS.find((c) => !usedC.has(c)) || COLORS[room.players.length % COLORS.length],
       ready: false,
       inGame: false,
-      role: null,
       connected: false,
       socketId: null,
       dropTimer: null,
@@ -480,6 +501,7 @@ module.exports = function registerSpyfall(io) {
       };
       room.vote.timer = setTimeout(() => checkVote(room, true), CFG.VOTE_SEC * 1000);
       pushSys(room, `${player.name}님이 ${target.name}님을 스파이로 지목했어요.`);
+      pushChatSys(room, `🗳 ${player.name}님이 ${target.name}님을 스파이로 지목했어요! 채팅으로 충분히 이야기해 보세요. 참가자 전원이 찬성해야 확정돼요. (${CFG.VOTE_SEC}초)`);
       cb({ ok: true });
       checkVote(room);
     });
@@ -509,7 +531,7 @@ module.exports = function registerSpyfall(io) {
       const guess = String((data && data.location) || '');
       if (!LOCATION_NAMES.includes(guess)) return cb({ ok: false, error: '목록에 없는 장소예요.' });
       cb({ ok: true });
-      if (guess === room.location.name) {
+      if (guess === room.location) {
         endGame(room, 'spy', `스파이가 장소(${guess})를 정확히 맞혔어요!`);
       } else {
         endGame(room, 'citizens', `스파이가 장소를 ${guess}(으)로 잘못 짚었어요. 시민 승리!`);
