@@ -184,7 +184,9 @@
   .ln.a .txt { color: #b8c9e6; }
   .ln.sys { color: var(--dim); font-size: 13px; }
   .locs { display: flex; flex-wrap: wrap; gap: 6px; }
-  .loc { border: 1px solid rgba(214,219,230,.22); background: transparent; border-radius: 2px; padding: 4px 9px; cursor: pointer; font-size: 13.5px; color: var(--text); }
+  .loc { border: 1px solid rgba(214,219,230,.22); background: transparent; border-radius: 2px; padding: 3px 8px; cursor: pointer; font-size: 13px; color: var(--text); }
+  #locGrid { max-height: 190px; overflow-y: auto; padding-right: 4px; }
+  #guessGrid { max-height: 44vh; overflow-y: auto; padding-right: 4px; }
   .loc.struck { text-decoration: line-through; opacity: .38; }
   .loc.pick { background: var(--manila); color: var(--ink); border-color: var(--manila); }
 
@@ -262,6 +264,11 @@
   .vchip.no { background: rgba(255,138,128,.2); }
   .vchip small { color: var(--dim); }
   .vb-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .votebar.compact { padding: 8px 10px; }
+  .vb-row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
+  .vb-row + .vb-row { margin-top: 6px; }
+  .vb-tally { font-size: 14px; white-space: nowrap; }
+  .vb-who { font-size: 13.5px; }
 
   /* 모바일 탭 (PC에서는 숨김) */
   .tabs { display: none; }
@@ -278,7 +285,7 @@
     .votebar { top: 54px; }
     #game[data-tab="game"] .side { display: none; }
     #game[data-tab="chat"] .players, #game[data-tab="chat"] .actionbar, #game[data-tab="chat"] #stage { display: none; }
-    .chat { height: 70vh; height: calc(100dvh - 210px); min-height: 320px; }
+    .chat { height: calc(100vh - 190px - var(--vbh, 0px)); height: calc(100dvh - 190px - var(--vbh, 0px)); min-height: 240px; }
   }
   .chat h3 { margin: 0; padding: 12px 14px 8px; }
   .chatlog { flex: 1; overflow-y: auto; padding: 4px 14px 10px; font-size: 14px; }
@@ -378,6 +385,7 @@
   let S = null, offset = 0;
   let stageKey = '', turnSig = '', threadSig = '', modalKey = null, voteKey = '';
   let chatTab = 'game', unread = 0;
+  let vbOverride = null;        // 투표 바 펼침 상태를 사용자가 직접 바꿨을 때 (null = 자동)
   let leaderIds = new Set();    // 현재 1등(점수 > 0) 플레이어 id
   let local = null;               // 'accuse' | 'guess'
   let resultDismissed = -1;
@@ -577,7 +585,7 @@
   }
 
   function locationsHTML() {
-    return `<div class="panel"><h3>장소 후보</h3>
+    return `<div class="panel"><h3>장소 후보 <small class="hint" id="locCount">${S.locations.length}곳</small></h3>
       <p class="hint" style="margin-top:0">탭하면 줄이 그어져요. (나에게만 보여요)</p>
       <div class="locs" id="locGrid">${S.locations.map((l) => `<button class="loc" data-loc="${esc(l)}">${esc(l)}</button>`).join('')}</div></div>`;
   }
@@ -611,11 +619,13 @@
         f.onclick = toggle;
         f.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); } };
       }
+      const updateLocCount = () => { const c = $('#locCount'); if (c) c.textContent = strike.size ? `남은 후보 ${S.locations.length - strike.size} / ${S.locations.length}곳` : `${S.locations.length}곳`; };
       document.querySelectorAll('#locGrid .loc').forEach((b) => {
         const name = b.dataset.loc;
         b.classList.toggle('struck', strike.has(name));
-        b.onclick = () => { strike.has(name) ? strike.delete(name) : strike.add(name); b.classList.toggle('struck', strike.has(name)); };
+        b.onclick = () => { strike.has(name) ? strike.delete(name) : strike.add(name); b.classList.toggle('struck', strike.has(name)); updateLocCount(); };
       });
+      updateLocCount();
     }
   }
 
@@ -742,40 +752,63 @@
   }
 
   /* 투표 바: 화면을 가리지 않고 상단에 고정. 채팅으로 토론한 뒤 투표 */
+  // 모바일 채팅 탭에서는 투표 바를 한두 줄로 줄여 채팅창을 가리지 않게 한다 (자세히 ▾ 로 펼칠 수 있음)
+  const vbExpanded = () => (vbOverride !== null ? vbOverride : !(isMobile() && chatTab === 'chat'));
+  function updateVbHeight() {
+    const el = $('#votebar');
+    const hgt = el.hidden ? 0 : (el.offsetHeight || 0);
+    if (document.documentElement && document.documentElement.style) document.documentElement.style.setProperty('--vbh', hgt + 'px');
+  }
+  if (typeof window.addEventListener === 'function') window.addEventListener('resize', updateVbHeight);
+
   function renderVoteBar() {
     const el = $('#votebar');
     const v = S && S.vote;
-    if (!v) { if (voteKey) { voteKey = ''; el.hidden = true; el.innerHTML = ''; } return; }
+    if (!v) { if (voteKey) { voteKey = ''; vbOverride = null; el.hidden = true; el.innerHTML = ''; updateVbHeight(); } return; }
     const spectator = S.me && S.me.spectator;
-    const key = JSON.stringify([v.accuserId, v.accusedId, v.votes, !!spectator, [...leaderIds]]);
+    const expanded = vbExpanded();
+    const key = JSON.stringify([v.accuserId, v.accusedId, v.votes, !!spectator, [...leaderIds], expanded, chatTab]);
     if (key === voteKey) return;
     voteKey = key;
     const who = (id) => { const p = pById(id); return p ? nm(p) : '?'; };
     const accused = v.accusedId === S.you;
     const canVote = v.eligible.includes(S.you) && v.votes[S.you] === undefined;
-    const chips = v.eligible.map((id) => {
-      const val = v.votes[id];
-      const p = pById(id);
-      if (!p) return '';
-      return `<span class="vchip ${val === true ? 'yes' : val === false ? 'no' : ''}" style="--c:${esc(p.color)}">${val === true ? '✅' : val === false ? '❌' : '⏳'} ${crown(p.id)}${esc(p.avatar)} ${esc(p.name)}${id === v.accuserId ? ' <small>지목자</small>' : ''}</span>`;
-    }).join('');
+    const agree = v.eligible.filter((id) => v.votes[id] === true).length;
+    const disagree = v.eligible.filter((id) => v.votes[id] === false).length;
+    const wait = v.eligible.length - agree - disagree;
     let action;
     if (spectator) action = '<span class="hint">관전 중이라 투표할 수 없어요.</span>';
     else if (accused) action = '<span><b>당신이 지목되었어요.</b> 채팅으로 해명해 보세요.</span>';
     else if (canVote) action = '<button class="btn primary small" data-vote="1">찬성</button><button class="btn small" data-vote="0">반대</button>';
     else action = '<span class="hint">투표를 마쳤어요. 다른 사람을 기다리는 중…</span>';
+    const toggle = `<button class="btn small ghost only-mobile" id="vbToggle">${expanded ? '접기 ▴' : '자세히 ▾'}</button>`;
     el.hidden = false;
-    el.innerHTML = `<div class="vb-head">🗳 <b>스파이 지목 투표 진행 중</b><span class="vb-time" id="vbTime"></span></div>
-      <div class="vb-body">${who(v.accuserId)}님이 ${who(v.accusedId)}님을 스파이로 지목했어요.<br>
-        <small>참가자 <b>전원이 찬성</b>해야 확정돼요. 한 명이라도 반대하면 바로 부결! 서두르지 말고 채팅으로 먼저 이야기해 보세요. 질문은 투표가 끝날 때까지 잠시 멈춰요.</small></div>
-      <div class="vb-voters">${chips}</div>
-      <div class="vb-actions">${action}<button class="btn small ghost only-mobile" id="vbChat">💬 채팅으로 토론하기</button></div>`;
+    el.classList.toggle('compact', !expanded);
+    if (expanded) {
+      const chips = v.eligible.map((id) => {
+        const val = v.votes[id];
+        const p = pById(id);
+        if (!p) return '';
+        return `<span class="vchip ${val === true ? 'yes' : val === false ? 'no' : ''}" style="--c:${esc(p.color)}">${val === true ? '✅' : val === false ? '❌' : '⏳'} ${crown(p.id)}${esc(p.avatar)} ${esc(p.name)}${id === v.accuserId ? ' <small>지목자</small>' : ''}</span>`;
+      }).join('');
+      el.innerHTML = `<div class="vb-head">🗳 <b>스파이 지목 투표 진행 중</b><span class="vb-time" id="vbTime"></span></div>
+        <div class="vb-body">${who(v.accuserId)}님이 ${who(v.accusedId)}님을 스파이로 지목했어요.<br>
+          <small>참가자 <b>전원이 찬성</b>해야 확정돼요. 한 명이라도 반대하면 바로 부결! 서두르지 말고 채팅으로 먼저 이야기해 보세요. 질문은 투표가 끝날 때까지 잠시 멈춰요.</small></div>
+        <div class="vb-voters">${chips}</div>
+        <div class="vb-actions">${action}${chatTab === 'chat' ? '' : '<button class="btn small ghost only-mobile" id="vbChat">💬 채팅으로 토론하기</button>'}${toggle}</div>`;
+    } else {
+      el.innerHTML = `<div class="vb-row"><span class="vb-ttl">🗳 <b>투표 중</b></span><span class="vb-who">${who(v.accuserId)} → ${who(v.accusedId)}</span><span class="vb-time" id="vbTime"></span></div>
+        <div class="vb-row"><span class="vb-tally">✅${agree} ❌${disagree} ⏳${wait}</span>${action}${toggle}</div>`;
+    }
     document.querySelectorAll('#votebar [data-vote]').forEach((b) => (b.onclick = async () => {
       const r = await call('spy_vote', { agree: b.dataset.vote === '1' });
       if (!r.ok) toast(r.error);
     }));
     const vc = $('#vbChat');
     if (vc) vc.onclick = () => setTab('chat');
+    const tg = $('#vbToggle');
+    if (tg) tg.onclick = () => { vbOverride = !vbExpanded(); voteKey = ''; renderVoteBar(); };
+    updateVbHeight();
     tick();
   }
 
@@ -840,6 +873,9 @@
     chatTab = t;
     $('#game').dataset.tab = t;
     document.querySelectorAll('#tabs button').forEach((b) => b.classList.toggle('on', b.dataset.tab === t));
+    vbOverride = null;
+    voteKey = '';
+    renderVoteBar();
     if (t === 'chat') { unread = 0; updateBadge(); $('#chatlog').scrollTop = 1e9; }
     else window.scrollTo && window.scrollTo(0, 0);
   }
