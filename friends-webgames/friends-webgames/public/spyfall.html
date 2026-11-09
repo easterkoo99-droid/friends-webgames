@@ -112,6 +112,12 @@
   .pl .nick { font-weight: 700; }
   .pl small { display: block; font-size: 12px; color: var(--dim); }
   .pl small.ok { color: var(--ok); }
+  .pl { position: relative; }
+  .pl .sc { margin-left: 4px; font-family: var(--display); font-size: 18px; color: var(--manila-lt); white-space: nowrap; }
+  .pl.leader { border-color: #f5c542; background: rgba(245,197,66,.12); box-shadow: 0 0 0 1px #f5c542, 0 0 16px rgba(245,197,66,.45); }
+  .pl.leader .sc { color: #f5c542; }
+  .pl.leader .nick { text-shadow: 0 0 10px rgba(245,197,66,.65); }
+  .pl .crown { position: absolute; left: -6px; top: -14px; font-size: 20px; transform: rotate(-18deg); filter: drop-shadow(0 2px 3px #0008); }
   .nm { font-weight: 700; white-space: nowrap; }
   .nmdot { font-weight: 700; white-space: nowrap; }
   .nmdot i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; vertical-align: baseline; box-shadow: 0 0 0 1px #0004; }
@@ -192,6 +198,8 @@
   .roles { width: 100%; border-collapse: collapse; font-size: 14px; }
   .roles td { padding: 4px 6px; border-top: 1px dashed #9a8a52; }
   .roles tr.spyrow td { color: var(--stamp); font-weight: 700; }
+  .roles td.pt { text-align: right; white-space: nowrap; }
+  .roles td.pt b { color: #2c6e48; }
 
   /* 모달 */
   .overlay { position: fixed; inset: 0; background: rgba(8,10,16,.76); display: grid; place-items: center; padding: 16px; z-index: 40; overflow-y: auto; }
@@ -323,6 +331,7 @@
         <li>차례인 사람은 받은 질문에 <em>답하고</em>, 다음 질문 상대를 지목해 질문해요. (A→B→C→D…) 방금 나에게 질문한 사람에게는 바로 되물을 수 없어요.</li>
         <li>수상한 사람은 참가자라면 누구나 한 번씩 <em>지목 투표</em>를 열 수 있어요. 지목된 사람을 뺀 참가자 <em>전원이 찬성</em>해야 확정되고, 누가 어떻게 투표했는지 모두에게 공개돼요.</li>
         <li>스파이는 언제든 <em>장소를 맞혀</em> 볼 수 있어요. 맞히면 승리, 틀리면 패배! 제한 시간은 <em>8분</em>이에요.</li>
+        <li><em>승점</em>이 판마다 쌓여요. 시민이 이기면 시민 +1(지목을 열어 가결시킨 사람은 +1 추가), 스파이가 이기면 시간 종료 +2 · 장소 맞힘/시민 오지목 +3. <em>1등에게는 👑</em>이 붙어요.</li>
         <li>질문 사이사이 <em>전체 채팅</em>으로 마음껏 떠들어도 좋아요.</li>
       </ol>
     </div>
@@ -369,6 +378,7 @@
   let S = null, offset = 0;
   let stageKey = '', turnSig = '', threadSig = '', modalKey = null, voteKey = '';
   let chatTab = 'game', unread = 0;
+  let leaderIds = new Set();    // 현재 1등(점수 > 0) 플레이어 id
   let local = null;               // 'accuse' | 'guess'
   let resultDismissed = -1;
   let strike = new Set(), seenGame = -1, cardOpen = false, guessPick = '';
@@ -378,10 +388,11 @@
   /* ───────── 유틸 ───────── */
   const pById = (id) => S.players.find((p) => p.id === id);
   // 어두운 배경용: 닉네임 색상으로 표시 / 종이(밝은 배경)용: 색 점 + 잉크색 글씨
-  const nm = (p) => `<span class="nm" style="color:${esc(p.color)}">${esc(p.avatar)} ${esc(p.name)}</span>`;
-  const nmDot = (p) => `<span class="nmdot"><i style="background:${esc(p.color)}"></i>${esc(p.avatar)} ${esc(p.name)}</span>`;
-  const asker = (q) => ({ avatar: q.askerAvatar, name: q.askerName, color: q.askerColor });
-  const target = (q) => ({ avatar: q.targetAvatar, name: q.targetName, color: q.targetColor });
+  const crown = (id) => (leaderIds.has(id) ? '👑 ' : '');
+  const nm = (p) => `<span class="nm" style="color:${esc(p.color)}">${crown(p.id)}${esc(p.avatar)} ${esc(p.name)}</span>`;
+  const nmDot = (p) => `<span class="nmdot"><i style="background:${esc(p.color)}"></i>${crown(p.id)}${esc(p.avatar)} ${esc(p.name)}</span>`;
+  const asker = (q) => ({ id: q.askerId, avatar: q.askerAvatar, name: q.askerName, color: q.askerColor });
+  const target = (q) => ({ id: q.targetId, avatar: q.targetAvatar, name: q.targetName, color: q.targetColor });
 
   function toast(msg) {
     const t = $('#toast');
@@ -458,6 +469,8 @@
   /* ───────── 상태 렌더링 ───────── */
   socket.on('spy_state', (s) => {
     S = s;
+    const top = Math.max(0, ...s.players.map((p) => p.score || 0));
+    leaderIds = new Set(top > 0 ? s.players.filter((p) => p.score === top).map((p) => p.id) : []);
     offset = s.now - Date.now();
     $('#roomcode').textContent = s.code;
     if (s.gameNo !== seenGame) { seenGame = s.gameNo; strike = new Set(); cardOpen = false; guessPick = ''; local = null; resultDismissed = -1; }
@@ -486,9 +499,12 @@
   function renderPlayers() {
     $('#players').innerHTML = S.players.map((p) => {
       const [label, cls] = statusLabel(p);
-      return `<div class="pl${p.id === S.you ? ' you' : ''}${S.phase === 'playing' && p.id === S.turnId ? ' turn' : ''}${p.connected ? '' : ' off'}" style="--c:${esc(p.color)}">
+      const leader = leaderIds.has(p.id);
+      return `<div class="pl${p.id === S.you ? ' you' : ''}${S.phase === 'playing' && p.id === S.turnId ? ' turn' : ''}${p.connected ? '' : ' off'}${leader ? ' leader' : ''}" style="--c:${esc(p.color)}">
+        ${leader ? '<span class="crown" title="현재 1등">👑</span>' : ''}
         <span class="av">${esc(p.avatar)}</span>
         <span><span class="nick" style="color:${esc(p.color)}">${esc(p.name)}${p.id === S.you ? ' (나)' : ''}</span><small class="${cls}">${label}</small></span>
+        <span class="sc" title="누적 승점">★${p.score || 0}</span>
       </div>`;
     }).join('');
   }
@@ -534,7 +550,7 @@
       </div>
       <div class="panel">
         <h3>진행 방법</h3>
-        <p class="hint" style="margin-top:0">시민은 같은 장소를 받고, 스파이는 장소를 몰라요. 차례대로 질문과 답변을 이어가고(A→B→C→D…), 수상한 사람은 투표로 지목해요(참가자 전원이 찬성해야 확정). 제한 시간은 8분이에요. 채팅으로 자유롭게 떠들 수 있어요.</p>
+        <p class="hint" style="margin-top:0">시민은 같은 장소를 받고, 스파이는 장소를 몰라요. 차례대로 질문과 답변을 이어가고(A→B→C→D…), 수상한 사람은 투표로 지목해요(참가자 전원이 찬성해야 확정). 제한 시간은 8분이에요. 판마다 승점이 쌓이고 1등에게는 👑이 붙어요. 채팅으로 자유롭게 떠들 수 있어요.</p>
       </div>`;
   }
 
@@ -621,7 +637,7 @@
     const cur = pById(S.turnId);
     if (cur && (!nodes.length || nodes[nodes.length - 1].id !== cur.id)) nodes.push({ id: cur.id, avatar: cur.avatar, name: cur.name, color: cur.color });
     el.innerHTML = '<span class="lbl">질문 순서</span>' + nodes.map((n, i) =>
-      `<span class="cn${i === nodes.length - 1 ? ' now' : ''}" style="--c:${esc(n.color)}">${esc(n.avatar)} ${esc(n.name)}${i === nodes.length - 1 ? ' · 차례' : ''}</span>`
+      `<span class="cn${i === nodes.length - 1 ? ' now' : ''}" style="--c:${esc(n.color)}">${crown(n.id)}${esc(n.avatar)} ${esc(n.name)}${i === nodes.length - 1 ? ' · 차례' : ''}</span>`
     ).join('<span class="arr">→</span>');
   }
 
@@ -698,7 +714,7 @@
   function updateThread() {
     const box = $('#thread');
     if (!box) return;
-    const sig = S.thread.map((x) => (x.type === 'qa' ? x.n + (x.answer ? 'a' : x.skipped ? 's' : 'p') : 'x')).join(',');
+    const sig = S.thread.map((x) => (x.type === 'qa' ? x.n + (x.answer ? 'a' : x.skipped ? 's' : 'p') : 'x')).join(',') + '|' + [...leaderIds].join(',');
     if (sig === threadSig) return;
     threadSig = sig;
     const stick = box.scrollTop + box.clientHeight >= box.scrollHeight - 40;
@@ -711,7 +727,7 @@
     const r = S.result;
     const cls = r.winner === 'spy' ? 'spy' : r.winner === 'citizens' ? 'citizens' : '';
     const title = r.winner === 'spy' ? '스파이 승리' : r.winner === 'citizens' ? '시민 승리' : '게임 중단';
-    const list = r.players.map((x) => `<tr class="${x.isSpy ? 'spyrow' : ''}"><td>${nmDot(x)}</td><td>${x.isSpy ? '스파이' : '시민'}</td></tr>`).join('');
+    const list = r.players.map((x) => `<tr class="${x.isSpy ? 'spyrow' : ''}"><td>${nmDot(x)}</td><td>${x.isSpy ? '스파이' : '시민'}</td><td class="pt">${x.gain > 0 ? `<b>+${x.gain}점</b>` : '0점'}</td><td class="pt">누적 ${x.score}점</td></tr>`).join('');
     const votes = r.voteRows
       ? `<p class="hint" style="color:#5d5738;margin:14px 0 4px">${esc(r.accusedName)}님 지목 투표 기록</p>
          <table class="roles">${r.voteRows.map((x) => `<tr><td>${nmDot(x)}</td><td>${x.vote === true ? '✅ 찬성' : x.vote === false ? '❌ 반대' : '⏳ 미투표'}</td></tr>`).join('')}</table>`
@@ -720,7 +736,8 @@
         <p class="verdict">${title}</p>
         <p>${esc(r.reason)}</p>
         <dl><dt>스파이</dt><dd>${esc(r.spyName)}</dd><dt>장소</dt><dd>${esc(r.location)}</dd></dl>
-        <table class="roles">${list}</table>${votes}
+        <table class="roles">${list}</table>
+        ${r.noScore ? '<p class="hint" style="color:#5d5738;margin:6px 0 0">중단된 판이라 점수가 없어요.</p>' : ''}${votes}
       </div>`;
   }
 
@@ -730,7 +747,7 @@
     const v = S && S.vote;
     if (!v) { if (voteKey) { voteKey = ''; el.hidden = true; el.innerHTML = ''; } return; }
     const spectator = S.me && S.me.spectator;
-    const key = JSON.stringify([v.accuserId, v.accusedId, v.votes, !!spectator]);
+    const key = JSON.stringify([v.accuserId, v.accusedId, v.votes, !!spectator, [...leaderIds]]);
     if (key === voteKey) return;
     voteKey = key;
     const who = (id) => { const p = pById(id); return p ? nm(p) : '?'; };
@@ -740,7 +757,7 @@
       const val = v.votes[id];
       const p = pById(id);
       if (!p) return '';
-      return `<span class="vchip ${val === true ? 'yes' : val === false ? 'no' : ''}" style="--c:${esc(p.color)}">${val === true ? '✅' : val === false ? '❌' : '⏳'} ${esc(p.avatar)} ${esc(p.name)}${id === v.accuserId ? ' <small>지목자</small>' : ''}</span>`;
+      return `<span class="vchip ${val === true ? 'yes' : val === false ? 'no' : ''}" style="--c:${esc(p.color)}">${val === true ? '✅' : val === false ? '❌' : '⏳'} ${crown(p.id)}${esc(p.avatar)} ${esc(p.name)}${id === v.accuserId ? ' <small>지목자</small>' : ''}</span>`;
     }).join('');
     let action;
     if (spectator) action = '<span class="hint">관전 중이라 투표할 수 없어요.</span>';
@@ -838,7 +855,7 @@
       d.className = 'msg';
       const b = document.createElement('b');
       b.style.color = m.color;
-      b.textContent = `${m.avatar} ${m.name}`;
+      b.textContent = `${m.pid && leaderIds.has(m.pid) ? '👑 ' : ''}${m.avatar} ${m.name}`;
       d.append(b);
       if (m.spectator) {
         const t = document.createElement('small');
