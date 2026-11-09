@@ -12,6 +12,7 @@
  *    (한 명이라도 반대하면 즉시 부결, 시간 안에 전원 찬성이 안 되어도 부결). 누가 어떻게 투표했는지 모두에게 공개
  *  - 스파이는 언제든 장소를 맞춰볼 수 있음 (정답이면 스파이 승, 오답이면 시민 승)
  *  - 8분이 지나면 스파이 승
+ *  - 승점제: 방이 유지되는 동안 판마다 점수가 누적됨 (CFG.SCORE 참고). 1등에게는 왕관 표시
  */
 const { makeCode, makeToken, makeId, cleanName, cleanText, pick } = require('./util');
 
@@ -24,6 +25,14 @@ const CFG = {
   DROP_GRACE_MS: 25000,
   ROOM_TTL_MS: 10 * 60 * 1000,
   CHAT_KEEP: 80,
+  // 승점표 (숫자만 바꿔서 조정)
+  SCORE: {
+    citizenWin: 1,     // 시민 승리 시 시민 전원
+    accuserBonus: 1,   // 스파이 지목 투표를 열어 가결시킨 사람 추가 점수
+    spyTimeout: 2,     // 스파이: 제한 시간 종료까지 버팀
+    spyGuess: 3,       // 스파이: 장소를 정확히 맞힘
+    spyFramed: 3,      // 스파이: 시민이 잘못 지목되어 가결
+  },
 };
 
 const AVATARS = ['🕵️', '🎩', '🕶️', '🧥', '🗝️', '📻', '🔦', '🥃', '🧳', '🔎'];
@@ -108,7 +117,7 @@ module.exports = function registerSpyfall(io) {
       readyCount,
       canStart: lobbyLike && !!(me && me.ready) && readyCount >= CFG.MIN_PLAYERS && readyCount <= CFG.MAX_PLAYERS,
       players: room.players.map((p) => ({
-        id: p.id, name: p.name, avatar: p.avatar, color: p.color, connected: p.connected, ready: p.ready, inGame: p.inGame,
+        id: p.id, name: p.name, avatar: p.avatar, color: p.color, connected: p.connected, ready: p.ready, inGame: p.inGame, score: p.score,
       })),
       endsAt: room.phase === 'playing' ? room.endsAt : 0,
       gameSec: CFG.GAME_SEC,
@@ -157,8 +166,31 @@ module.exports = function registerSpyfall(io) {
     pushSys(room, `게임 시작! ${nameOf(room, room.turnId)}님부터 질문을 시작하세요.`);
     room.endsAt = Date.now() + CFG.GAME_SEC * 1000;
     clearTimeout(room.timer);
-    room.timer = setTimeout(() => endGame(room, 'spy', '제한 시간이 끝났어요. 스파이를 찾지 못했습니다.'), CFG.GAME_SEC * 1000);
+    room.timer = setTimeout(() => endGame(room, 'spy', '제한 시간이 끝났어요. 스파이를 찾지 못했습니다.', { kind: 'timeout' }), CFG.GAME_SEC * 1000);
     broadcast(room);
+  }
+
+  // 종료 유형별 점수 계산: { 플레이어id: 획득 점수 }
+  // kind: caught(지목 가결로 스파이 검거) | wrongGuess(스파이 오답) | timeout | guess(스파이 정답) | framed(시민 오지목) | abort(중단: 점수 없음)
+  function computeGains(room, kind, extra) {
+    const gains = {};
+    const SC = CFG.SCORE;
+    const gs = gamersOf(room);
+    const give = (id, n) => { if (gs.some((p) => p.id === id)) gains[id] = (gains[id] || 0) + n; };
+    const citizens = gs.filter((p) => p.id !== room.spyId);
+    if (kind === 'caught') {
+      citizens.forEach((p) => give(p.id, SC.citizenWin));
+      if (extra.accuserId && extra.accuserId !== room.spyId) give(extra.accuserId, SC.accuserBonus);
+    } else if (kind === 'wrongGuess') {
+      citizens.forEach((p) => give(p.id, SC.citizenWin));
+    } else if (kind === 'timeout') {
+      give(room.spyId, SC.spyTimeout);
+    } else if (kind === 'guess') {
+      give(room.spyId, SC.spyGuess);
+    } else if (kind === 'framed') {
+      give(room.spyId, SC.spyFramed);
+    }
+    return gains;
   }
 
   function endGame(room, winner, reason, extra = {}) {
@@ -168,6 +200,8 @@ module.exports = function registerSpyfall(io) {
     room.vote = null;
     room.phase = 'ended';
     room.endsAt = 0;
+    const gains = computeGains(room, extra.kind || 'abort', extra);
+    gamersOf(room).forEach((p) => { p.score += gains[p.id] || 0; });
     room.result = {
       winner, // 'citizens' | 'spy' | 'none'
       reason,
@@ -176,7 +210,9 @@ module.exports = function registerSpyfall(io) {
       location: room.location,
       players: gamersOf(room).map((p) => ({
         id: p.id, name: p.name, avatar: p.avatar, color: p.color, isSpy: p.id === room.spyId,
+        gain: gains[p.id] || 0, score: p.score,
       })),
+      noScore: !Object.keys(gains).length,
       accusedName: extra.accusedName || null,
       voteRows: extra.voteRows || null,
     };
@@ -218,11 +254,11 @@ module.exports = function registerSpyfall(io) {
       pushSys(room, `${accusedName}님 지목이 부결되었어요. 게임을 계속합니다.`);
       return broadcast(room);
     }
-    const extra = { voteRows: rows, accusedName };
+    const extra = { voteRows: rows, accusedName, accuserId: v.accuserId };
     if (v.accusedId === room.spyId) {
-      endGame(room, 'citizens', `전원이 찬성해 지목한 ${accusedName}님이 진짜 스파이였어요!`, extra);
+      endGame(room, 'citizens', `전원이 찬성해 지목한 ${accusedName}님이 진짜 스파이였어요!`, { ...extra, kind: 'caught' });
     } else {
-      endGame(room, 'spy', `${accusedName}님은 시민이었어요. 무고한 사람을 지목해 스파이가 승리했습니다.`, extra);
+      endGame(room, 'spy', `${accusedName}님은 시민이었어요. 무고한 사람을 지목해 스파이가 승리했습니다.`, { ...extra, kind: 'framed' });
     }
   }
 
@@ -263,7 +299,7 @@ module.exports = function registerSpyfall(io) {
     // 스파이가 떠나면 시민 승리 (결과에 스파이 정보를 담기 위해 제거 전에 종료 처리)
     if (wasGamer && player.id === room.spyId) {
       pushSys(room, `${player.name}님(스파이)이 게임을 떠났어요.`);
-      endGame(room, 'citizens', `스파이(${player.name})가 게임을 떠났어요. 시민 승리!`);
+      endGame(room, 'citizens', `스파이(${player.name})가 게임을 떠났어요. 시민 승리! (중단된 판이라 점수는 없어요)`, { kind: 'abort' });
       room.players = room.players.filter((p) => p.id !== player.id);
       if (room.players.length === 0) return destroyRoom(room);
       return broadcast(room);
@@ -276,7 +312,7 @@ module.exports = function registerSpyfall(io) {
     if (wasGamer) {
       pushSys(room, `${player.name}님이 게임을 떠났어요.`);
       if (gamersOf(room).length < CFG.MIN_PLAYERS) {
-        return endGame(room, 'none', '인원이 부족해 게임이 중단되었어요.');
+        return endGame(room, 'none', '인원이 부족해 게임이 중단되었어요. (점수 없음)', { kind: 'abort' });
       }
       if (room.vote) {
         const v = room.vote;
@@ -320,6 +356,7 @@ module.exports = function registerSpyfall(io) {
       color: COLORS.find((c) => !usedC.has(c)) || COLORS[room.players.length % COLORS.length],
       ready: false,
       inGame: false,
+      score: 0,
       connected: false,
       socketId: null,
       dropTimer: null,
@@ -532,9 +569,9 @@ module.exports = function registerSpyfall(io) {
       if (!LOCATION_NAMES.includes(guess)) return cb({ ok: false, error: '목록에 없는 장소예요.' });
       cb({ ok: true });
       if (guess === room.location) {
-        endGame(room, 'spy', `스파이가 장소(${guess})를 정확히 맞혔어요!`);
+        endGame(room, 'spy', `스파이가 장소(${guess})를 정확히 맞혔어요!`, { kind: 'guess' });
       } else {
-        endGame(room, 'citizens', `스파이가 장소를 ${guess}(으)로 잘못 짚었어요. 시민 승리!`);
+        endGame(room, 'citizens', `스파이가 장소를 ${guess}(으)로 잘못 짚었어요. 시민 승리!`, { kind: 'wrongGuess' });
       }
     });
 
@@ -548,6 +585,7 @@ module.exports = function registerSpyfall(io) {
       if (!text) return;
       c.player.lastChatAt = now;
       const msg = {
+        pid: c.player.id,
         name: c.player.name,
         avatar: c.player.avatar,
         color: c.player.color,
