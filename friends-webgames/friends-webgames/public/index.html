@@ -193,6 +193,7 @@
 <body>
 <div class="banner" id="banner" hidden>연결이 끊겼어요. 다시 연결하는 중…</div>
 <div class="toast" id="toast" hidden></div>
+<div class="banner" id="mismatch" hidden style="top:auto;bottom:0">⚠️ 서버 파일(hub.js)과 화면 파일(index.html)의 버전이 달라요. 올린 파일을 모두 다시 올려 주세요.</div>
 
 <!-- 입장: 큰 제목 + 아래에서 올라온 패널. 초대 링크로 오면 ‘코드로 입장’이 바로 열려요 -->
 <main class="screen" id="entry">
@@ -319,6 +320,7 @@
   const socket = io();
   const call = (ev, data) => new Promise((res) => socket.emit(ev, data || {}, res));
 
+  const PROTO = 4;           // 서버(hub.js)와 같아야 해요
   let S = null;              // 서버가 보내 주는 방 상태
   let offset = 0;            // 서버 시각과의 차이
   let leaderIds = new Set();
@@ -357,6 +359,8 @@
   }
 
   const pById = (id) => (S ? S.players.find((p) => p.id === id) : null);
+  // 게임은 방장만 고르고 바꿔요. 서버가 보낸 잠금 표시에 기대지 않고, 방장(hostId)이 나인지로 직접 판단해요.
+  const isLocked = () => !!S && S.hostOnly !== false && S.hostId !== S.you;
   const crown = (id) => (leaderIds.has(id) ? '👑' : '');
   const nm = (p) => (p ? `<span class="nmc" style="color:${esc(p.color)};font-weight:800">${esc(p.avatar)} ${esc(p.name)}${crown(p.id)}</span>` : '?');
 
@@ -492,7 +496,7 @@
     if (S.phase !== 'lobby') { el.hidden = true; lobbyOpen = false; return; }
     el.hidden = false;
     const sel = S.games.find((g) => g.id === S.selected);
-    const locked = !!S.switchLocked;
+    const locked = isLocked();
     const host = pById(S.hostId);
     if (locked || S.games.length < 2) lobbyOpen = false;
     if (lastSelected !== S.selected) { lobbyOpen = false; lastSelected = S.selected; }
@@ -510,7 +514,7 @@
         <p class="hint">친구들에게 방 코드 <b>${esc(S.code)}</b> 또는 초대 링크를 보내세요. ${sel.min}~${sel.max}명이 ‘준비’를 누르면 시작할 수 있어요.</p></div>`;
     $$('[data-game]').forEach((b) => {
       b.onclick = async () => {
-        if (S.switchLocked) { toast('방장만 게임을 고를 수 있어요.'); return; }
+        if (isLocked()) { toast('방장만 게임을 고를 수 있어요.'); return; }
         if (!lobbyOpen) { lobbyOpen = true; renderLobby(); return; }   // 선택된 카드를 눌러도 목록이 펼쳐져요
         const r = await call('select', { game: b.dataset.game });
         if (r && !r.ok) { toast(r.error); return; }
@@ -529,9 +533,9 @@
     const lobbyLike = S.phase === 'lobby' || S.finished;
     let html = `<button class="btn ${me.ready ? '' : 'primary'}" id="hbReady">${me.ready ? '준비 취소' : (lobbyLike ? '준비' : '다음 판 준비')}</button>`;
     if (lobbyLike) html += `<button class="btn primary" id="hbStart" ${S.canStart ? '' : 'disabled'}>${S.finished ? '다시 하기' : '게임 시작'}</button>`;
-    if (S.phase === 'game' && !S.switchLocked) html += '<button class="btn" id="hbSwitch">🔄 게임 바꾸기</button>';   // 방장만
+    if (S.phase === 'game' && !isLocked()) html += '<button class="btn" id="hbSwitch">🔄 게임 바꾸기</button>';   // 방장만
     let note;
-    if (lobbyLike) note = `${esc(sel.name)} · 준비 ${S.readyCount}명 (${sel.min}~${sel.max}명 필요)${me.ready ? '' : ' — 준비를 눌러 주세요'}${S.finished && S.switchLocked ? ' · 게임 바꾸기는 방장만 해요' : ''}`;
+    if (lobbyLike) note = `${esc(sel.name)} · 준비 ${S.readyCount}명 (${sel.min}~${sel.max}명 필요)${me.ready ? '' : ' — 준비를 눌러 주세요'}${S.finished && isLocked() ? ' · 게임 바꾸기는 방장만 해요' : ''}`;
     else note = S.spectator ? '관전 중이에요. 준비를 눌러 두면 다음 판에 참가해요.' : `${esc(sel.name)} 진행 중`;
     const running = S.phase === 'game' && !S.finished;
     if (!running || S.spectator) html += `<div class="hbnote" id="hbNote">${note}</div>`;   // 게임 중에는 안내 문구를 줄여요
@@ -635,6 +639,7 @@
   socket.on('state', (s) => {
     S = s;
     offset = s.now - Date.now();
+    $('#mismatch').hidden = s.proto === PROTO;   // 서버 파일이 옛날 버전이면 경고
     const top = Math.max(0, ...s.players.map((p) => p.score));
     leaderIds = new Set(top >= 1 ? s.players.filter((p) => p.score === top).map((p) => p.id) : []);
     showRoom();

@@ -20,8 +20,12 @@ const CFG = {
   DROP_GRACE_MS: 25000,    // 연결이 끊긴 뒤 자리를 유지하는 시간
   ROOM_TTL_MS: 10 * 60 * 1000,
   CHAT_KEEP: 80,
-  HOST_ONLY_SWITCH: false, // true 면 방장(방을 만든 사람)만 게임을 바꿀 수 있어요
+  // 방장(방을 만든 사람, 나가면 다음 사람)만 게임을 고르고 바꿀 수 있어요. false 로 바꾸면 누구나 바꿀 수 있어요. (테스트용: 환경변수 HOST_ONLY_SWITCH=0)
+  get HOST_ONLY_SWITCH() { return process.env.HOST_ONLY_SWITCH !== '0'; },
 };
+
+// 화면 파일(index.html)과 서버 파일(hub.js)이 같은 버전인지 확인하는 번호예요. 규칙이 바뀌면 둘 다 올리고 이 번호를 같이 올려요.
+const PROTO = 4;
 
 const AVATARS = ['🐯', '🐱', '🐻', '🐰', '🦊', '🐼', '🐸', '🐵', '🐧', '🦁', '🐮', '🐷', '🐨', '🐶', '🦄', '🐙'];
 const COLORS = [
@@ -67,7 +71,9 @@ module.exports = function registerHub(io) {
       gameNo: room.gameNo,
       games: PLUGINS.map((p) => ({ id: p.id, name: p.name, emoji: p.emoji, accent: p.accent || '#7c6cff', desc: p.desc, rules: p.rules || [], min: p.min, max: p.max })),
       selected: room.gameId,
-      switchLocked: CFG.HOST_ONLY_SWITCH && me && me.id !== room.hostId,
+      proto: PROTO,
+      hostOnly: CFG.HOST_ONLY_SWITCH,
+      switchLocked: !!(CFG.HOST_ONLY_SWITCH && me && me.id !== room.hostId),
       players: room.players.map((p) => ({
         id: p.id, name: p.name, avatar: p.avatar, color: p.color, connected: p.connected,
         ready: p.ready, inGame: p.inGame, score: p.score,
@@ -285,7 +291,7 @@ module.exports = function registerHub(io) {
       const c = ctxOf(socket);
       if (!c) return cb({ ok: false, error: '방에 연결되어 있지 않아요.' });
       const { room, player } = c;
-      if (CFG.HOST_ONLY_SWITCH && player.id !== room.hostId && !isFinished(room)) return cb({ ok: false, error: '방장만 진행 중인 게임을 멈출 수 있어요.' });
+      if (CFG.HOST_ONLY_SWITCH && player.id !== room.hostId) return cb({ ok: false, error: '방장만 게임을 바꿀 수 있어요.' });
       if (room.phase === 'game') {
         implOf(room).dispose(room);
         room.phase = 'lobby';
