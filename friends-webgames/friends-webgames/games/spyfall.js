@@ -86,6 +86,7 @@ module.exports = {
   id: 'spyfall',
   name: '우리가 있는 곳은?',
   emoji: '📍',
+  accent: '#2dd4bf',   // 대기실 카드 색
   desc: '한 명만 장소를 몰라요. 질문으로 스파이를 찾아라!',
   rules: [
     '시민은 같은 장소를 받고, 스파이만 장소를 몰라요.',

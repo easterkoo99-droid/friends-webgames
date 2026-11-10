@@ -12,12 +12,14 @@
   const CSS = `
   .vg { display: flex; flex-direction: column; gap: 12px; }
   .vg .card h3 { margin-bottom: 8px; }
-  .vg-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
-  .vg-head.night { background: #1d2340; color: #eef0ff; border-color: #2e3766; }
+  .vg-head { display: block; }
+  .vg-head .vg-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .vg-head.night { background: linear-gradient(160deg, #111b38, #0a0d18 78%); color: #e9edff; border-color: #25325e; }
+  .vg-head.day { background: linear-gradient(160deg, color-mix(in srgb, var(--accent) 20%, var(--card-solid)), var(--card-solid) 75%); }
   .vg-head.night .hint { color: #aeb6e6; }
-  .vg-phase { font-size: 20px; font-weight: 800; }
-  .vg-timer { font-size: 22px; font-weight: 800; font-variant-numeric: tabular-nums; }
-  .vg-rolebtn { width: 100%; border: 2px dashed var(--line); background: var(--card); border-radius: 16px; padding: 16px; text-align: left; cursor: pointer; display: flex; flex-direction: column; gap: 4px; }
+  .vg-phase { font-weight: 800; font-size: 20px; letter-spacing: -.01em; }
+  .vg-timer { font-family: var(--mono); font-size: 24px; font-weight: 600; color: var(--accent); font-variant-numeric: tabular-nums; }
+  .vg-rolebtn { width: 100%; border: 2px dashed var(--line); background: var(--card); border-radius: var(--r-lg); padding: 16px; text-align: left; cursor: pointer; display: flex; flex-direction: column; gap: 4px; }
   .vg-rolebtn.open { border-style: solid; }
   .vg-rolebtn.good.open { border-color: var(--ok); background: color-mix(in srgb, var(--ok) 8%, var(--card)); }
   .vg-rolebtn.evil.open { border-color: var(--bad); background: color-mix(in srgb, var(--bad) 10%, var(--card)); }
@@ -25,18 +27,18 @@
   .vg-rolebtn small { font-size: 13.5px; color: var(--dim); line-height: 1.45; }
   .vg-evil { margin-top: 6px; font-size: 14px; }
   .vg-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
-  .vg-chip { border: 2px solid var(--line); background: var(--card); border-radius: 999px; padding: 7px 12px; font-weight: 700; cursor: pointer; }
+  .vg-chip { border: 2px solid var(--line); background: var(--card); border-radius: var(--r); padding: 7px 12px; font-weight: 700; cursor: pointer; }
   .vg-chip.on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--card)); }
   .vg-chip:disabled { opacity: .4; cursor: default; }
   .vg-act .btn { margin-top: 6px; }
   .vg-seats { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
-  .vg-seat { border: 1.5px solid var(--line); border-radius: 12px; padding: 8px 10px; font-size: 14px; background: var(--soft); display: flex; flex-direction: column; gap: 2px; }
+  .vg-seat { border: 1.5px solid var(--line); border-radius: var(--r); padding: 8px 10px; font-size: 14px; background: var(--soft); display: flex; flex-direction: column; gap: 2px; }
   .vg-seat.dead { opacity: .55; }
   .vg-seat.block { border-color: var(--bad); box-shadow: 0 0 0 1.5px var(--bad) inset; }
   .vg-seat.me { border-color: var(--accent); }
   .vg-seat small { color: var(--dim); }
   .vg-notes { display: flex; flex-direction: column; gap: 6px; font-size: 14.5px; }
-  .vg-note { background: var(--soft); border-radius: 10px; padding: 8px 10px; }
+  .vg-note { background: var(--soft); border-radius: var(--r); padding: 8px 10px; }
   .vg-note i { font-style: normal; font-weight: 800; color: var(--dim); margin-right: 6px; font-size: 12px; }
   .vg-log { max-height: 280px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; font-size: 14px; }
   .vg-log div { padding: 2px 0; border-bottom: 1px dashed var(--line); }
@@ -50,12 +52,12 @@
   .vg-vrows { display: flex; flex-wrap: wrap; gap: 4px 10px; margin: 6px 0; font-size: 13.5px; }
   .vg-vbtns { display: flex; gap: 8px; align-items: center; margin-top: 6px; flex-wrap: wrap; }
   .vg-mback { position: fixed; inset: 0; z-index: 85; background: rgba(0,0,0,.5); display: flex; align-items: center; justify-content: center; padding: 16px; }
-  .vg-mbox { background: var(--card); border-radius: 18px; padding: 20px; width: 100%; max-width: 460px; max-height: 85vh; overflow-y: auto; }
+  .vg-mbox { background: var(--card-solid, var(--card)); border-radius: var(--r-lg); padding: 20px; width: 100%; max-width: 460px; max-height: 85vh; overflow-y: auto; }
   .vg-mbox .actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
   .vg-wchips { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
-  .vg-chip i { font-style: normal; background: var(--accent); color: #fff; border-radius: 10px; padding: 0 6px; font-size: 11px; margin-left: 4px; }
+  .vg-chip i { font-style: normal; background: var(--accent); color: #fff; border-radius: var(--r); padding: 0 6px; font-size: 11px; margin-left: 4px; }
   .vg-wthread { max-height: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; margin: 6px 0; font-size: 14.5px; }
-  .vg-wm { background: var(--soft); border-radius: 10px; padding: 6px 10px; align-self: flex-start; max-width: 90%; word-break: break-word; }
+  .vg-wm { background: var(--soft); border-radius: var(--r); padding: 6px 10px; align-self: flex-start; max-width: 90%; word-break: break-word; }
   .vg-wm.me { align-self: flex-end; background: color-mix(in srgb, var(--accent) 10%, var(--card)); }
   .vg-wform { display: flex; gap: 8px; margin-top: 6px; }
   .vg-wform input { flex: 1; }
@@ -115,7 +117,7 @@
     else if (G.phase === 'night') { title = `🌙 ${G.night}번째 밤`; sub = '능력이 있는 사람은 선택을 해 주세요. 모두 눈을 감고 기다려요.'; }
     else if (G.dayPhase === 'talk') { title = `☀️ ${G.day}번째 낮 · 토론`; sub = '채팅으로 이야기하세요. 과반이 동의하면 일찍 끝낼 수 있어요.'; }
     else { title = `🗳 ${G.day}번째 낮 · 지목`; sub = '의심스러운 사람을 지목해 처형 투표를 열 수 있어요.'; }
-    el.innerHTML = `<div><div class="vg-phase">${title}</div><div class="hint">${esc(sub)}</div></div><div class="vg-timer" id="vg-timer"></div>`;
+    el.innerHTML = `<div class="vg-top"><div class="vg-phase">${title}</div><div class="vg-timer" id="vg-timer"></div></div><div class="hint">${esc(sub)}</div>`;
   }
 
   /* ───────── 내 직업 ───────── */

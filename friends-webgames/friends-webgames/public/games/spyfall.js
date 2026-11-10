@@ -15,34 +15,34 @@
   .sp { display: flex; flex-direction: column; gap: 12px; }
   .sp .card h3 { margin-bottom: 8px; }
   .sp-clock { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-  .sp-time { font-size: 28px; font-weight: 800; font-variant-numeric: tabular-nums; min-width: 76px; }
+  .sp-time { font-family: var(--mono); font-size: 26px; font-weight: 600; color: var(--accent); font-variant-numeric: tabular-nums; min-width: 76px; }
   .sp-time.low { color: var(--bad); }
-  .sp-track { flex: 1 1 80px; height: 8px; border-radius: 6px; background: var(--soft); overflow: hidden; }
+  .sp-track { flex: 1 1 80px; height: 4px; border-radius: var(--r); background: var(--soft); overflow: hidden; }
   .sp-track i { display: block; height: 100%; background: var(--accent); width: 100%; transition: width .4s linear; }
   .sp-btns { display: flex; gap: 8px; }
-  .sp-cardbtn { width: 100%; border: 2px dashed var(--line); background: var(--card); border-radius: 16px; padding: 18px; text-align: center; font-weight: 800; font-size: 16px; cursor: pointer; display: flex; flex-direction: column; gap: 4px; }
+  .sp-cardbtn { width: 100%; border: 2px dashed var(--line); background: var(--card); border-radius: var(--r-lg); padding: 18px; text-align: center; font-weight: 800; font-size: 16px; cursor: pointer; display: flex; flex-direction: column; gap: 4px; }
   .sp-cardbtn.open { border-style: solid; border-color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, var(--card)); font-size: 22px; }
   .sp-cardbtn.open.spy { border-color: var(--bad); background: color-mix(in srgb, var(--bad) 10%, var(--card)); }
   .sp-cardbtn small { font-size: 13px; font-weight: 500; color: var(--dim); }
-  .sp-rolein { display: flex; flex-direction: column; gap: 4px; padding: 14px; border-radius: 16px; background: var(--soft); text-align: center; }
+  .sp-rolein { display: flex; flex-direction: column; gap: 4px; padding: 14px; border-radius: var(--r-lg); background: var(--soft); text-align: center; }
   .sp-chain { display: flex; flex-wrap: wrap; gap: 4px 6px; align-items: center; font-size: 14px; }
   .sp-chain:empty { display: none; }
   .sp-chain .ar { color: var(--dim); }
   .sp-turn label { display: block; font-size: 13px; color: var(--dim); margin: 12px 0 6px; }
-  .sp-pend { background: var(--soft); border-radius: 12px; padding: 10px 12px; font-size: 14.5px; }
+  .sp-pend { background: var(--soft); border-radius: var(--r); padding: 10px 12px; font-size: 14.5px; }
   .sp-targets { display: flex; flex-wrap: wrap; gap: 6px; }
-  .sp-t { border: 2px solid var(--line); background: var(--card); border-radius: 999px; padding: 7px 12px; font-weight: 700; cursor: pointer; }
+  .sp-t { border: 2px solid var(--line); background: var(--card); border-radius: var(--r); padding: 7px 12px; font-weight: 700; cursor: pointer; }
   .sp-t.on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--card)); }
   .sp-turn .btn.big { margin-top: 14px; }
   .sp-thread { max-height: 300px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
   .sp-qa { display: flex; flex-direction: column; gap: 4px; }
   .sp-qh { font-size: 13px; color: var(--dim); }
-  .sp-bub { background: var(--soft); border-radius: 12px; padding: 8px 12px; font-size: 15px; align-self: flex-start; max-width: 92%; word-break: break-word; }
+  .sp-bub { background: var(--soft); border-radius: var(--r); padding: 8px 12px; font-size: 15px; align-self: flex-start; max-width: 92%; word-break: break-word; }
   .sp-bub.a { align-self: flex-end; background: color-mix(in srgb, var(--accent) 10%, var(--card)); border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--line)); }
   .sp-bub.wait { color: var(--dim); font-style: italic; }
   .sp-sys { text-align: center; color: var(--dim); font-size: 13px; }
   .sp-locs { display: flex; flex-wrap: wrap; gap: 6px; }
-  .sp-loc { border: 1.5px solid var(--line); background: var(--soft); border-radius: 10px; padding: 6px 10px; font-size: 14px; cursor: pointer; }
+  .sp-loc { border: 1.5px solid var(--line); background: var(--soft); border-radius: var(--r); padding: 6px 10px; font-size: 14px; cursor: pointer; }
   .sp-loc.x { text-decoration: line-through; opacity: .4; }
   .sp-res h2 { margin-bottom: 6px; }
   .sp-res .win-c { color: var(--ok); } .sp-res .win-s { color: var(--bad); }
@@ -54,7 +54,7 @@
   .sp-vrows { display: flex; flex-wrap: wrap; gap: 4px 10px; margin: 6px 0; font-size: 13.5px; }
   .sp-vbtns { display: flex; gap: 8px; align-items: center; margin-top: 6px; flex-wrap: wrap; }
   .sp-mback { position: fixed; inset: 0; z-index: 85; background: rgba(0,0,0,.5); display: flex; align-items: center; justify-content: center; padding: 16px; }
-  .sp-mbox { background: var(--card); border-radius: 18px; padding: 20px; width: 100%; max-width: 440px; max-height: 85vh; overflow-y: auto; }
+  .sp-mbox { background: var(--card-solid, var(--card)); border-radius: var(--r-lg); padding: 20px; width: 100%; max-width: 440px; max-height: 85vh; overflow-y: auto; }
   .sp-mbox .actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
   .sp .err { margin-top: 8px; }
   `;

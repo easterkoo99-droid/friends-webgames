@@ -1,178 +1,261 @@
 <!DOCTYPE html>
-<html lang="ko" data-theme="light">
+<html lang="ko" data-theme="dark">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#f6f3ee">
+<meta name="theme-color" content="#0b0d11">
+<meta name="color-scheme" content="dark light">
 <title>게임방</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- 폰트: 영문·숫자 Geist, 한글 Pretendard Variable, 작은 라벨 IBM Plex Mono (모두 무료 오픈 폰트) -->
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" rel="stylesheet">
 <style>
   :root {
-    --bg: #f6f3ee; --card: #ffffff; --ink: #241f1a; --dim: #7a7167; --line: #e6dfd5; --soft: #f0ebe3;
-    --accent: #e4493d; --accent-ink: #ffffff; --ok: #1f9d6a; --warn: #d98a00; --bad: #d23b3b;
-    --shadow: 0 6px 24px rgba(60, 40, 20, .08);
-    --font: Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', system-ui, sans-serif;
+    --bg: #0b0d11; --card: #10141a; --card-solid: #10141a; --soft: rgba(255, 255, 255, .045);
+    --line: #1f262f; --line2: #2b3440; --ink: #e7eaf0; --dim: #7f8997;
+    --accent: #38bdf8; --accent-ink: #031017; --accent2: #818cf8;
+    --ok: #34d399; --bad: #f0616d; --warn: #f5b942;
+    --shadow: 0 0 0 1px rgba(255, 255, 255, .02), 0 14px 34px rgba(0, 0, 0, .5);
+    --bg-art: linear-gradient(180deg, rgba(56, 189, 248, .07), transparent 260px);
+    --r: 6px; --r-lg: 10px;
+    --mono: 'IBM Plex Mono', 'Pretendard Variable', Pretendard, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --font: 'Geist', 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', system-ui, sans-serif;
+    --display: var(--font);
   }
-  [data-theme="dark"] {
-    --bg: #171411; --card: #231f19; --ink: #f4ede4; --dim: #a79c8e; --line: #3a342b; --soft: #2d281f;
-    --accent: #ee5a4d; --ok: #3fc088; --warn: #f0a824; --bad: #ef6a6a;
-    --shadow: 0 6px 24px rgba(0, 0, 0, .4);
+  [data-theme="light"] {
+    --bg: #f1f3f6; --card: #ffffff; --card-solid: #ffffff; --soft: rgba(15, 23, 42, .04);
+    --line: #dde2e9; --line2: #c9d0da; --ink: #131a24; --dim: #64707f;
+    --accent: #0284c7; --accent-ink: #ffffff;
+    --ok: #0f9f6e; --bad: #d93a4a; --warn: #c98a00;
+    --shadow: 0 10px 28px rgba(20, 30, 60, .1);
+    --bg-art: linear-gradient(180deg, rgba(2, 132, 199, .06), transparent 260px);
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  html, body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font); font-size: 16px; line-height: 1.5; }
+  html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--ink); font-family: var(--font); font-size: 15.5px; line-height: 1.5; }
+  body { background: var(--bg-art), var(--bg); background-attachment: fixed; }
   button, input { font-family: inherit; font-size: inherit; color: inherit; }
   [hidden] { display: none !important; }
   h1, h2, h3 { margin: 0; line-height: 1.3; }
-  h2 { font-size: 20px; } h3 { font-size: 16px; }
-  .hint { color: var(--dim); font-size: 14px; margin: 6px 0 0; }
+  h2 { font-size: 20px; font-weight: 800; letter-spacing: -.01em; }
+  h3 { font-size: 15.5px; font-weight: 800; }
+  .hint { color: var(--dim); font-size: 13.5px; margin: 6px 0 0; }
   .grow { flex: 1; }
+  svg { display: block; }
+  .mono, .eyebrow { font-family: var(--mono); font-size: 10.5px; letter-spacing: .2em; text-transform: uppercase; color: var(--dim); font-weight: 500; }
+  .eyebrow { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+  .eyebrow b { color: var(--accent); font-weight: 600; letter-spacing: .12em; }
 
-  /* 버튼/입력 */
-  .btn { border: 1.5px solid var(--line); background: var(--card); color: var(--ink); border-radius: 12px; padding: 11px 16px; font-weight: 700; cursor: pointer; touch-action: manipulation; }
-  .btn:disabled { opacity: .45; cursor: default; }
-  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
-  .btn.danger { color: var(--bad); border-color: var(--bad); }
+  /* 버튼 / 입력 */
+  .btn { border: 1px solid var(--line2); background: #171d25; color: var(--ink); border-radius: var(--r); padding: 11px 16px; font-weight: 700; cursor: pointer; touch-action: manipulation; transition: filter .15s, border-color .15s, background .15s; }
+  [data-theme="light"] .btn { background: #f3f5f8; }
+  .btn:hover:not(:disabled) { border-color: color-mix(in srgb, var(--accent) 55%, var(--line2)); }
+  .btn:disabled { opacity: .38; cursor: default; }
+  .btn.primary { background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 24%, #0d1218), color-mix(in srgb, var(--accent) 14%, #0b0f14)); border-color: color-mix(in srgb, var(--accent) 65%, transparent); color: color-mix(in srgb, var(--accent) 55%, #fff); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .06), 0 0 22px color-mix(in srgb, var(--accent) 12%, transparent); }
+  [data-theme="light"] .btn.primary { background: var(--accent); color: #fff; border-color: transparent; box-shadow: none; }
+  .btn.danger { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 55%, transparent); background: color-mix(in srgb, var(--bad) 7%, transparent); }
   .btn.ghost { background: transparent; }
-  .btn.small { padding: 7px 11px; font-size: 14px; border-radius: 10px; }
-  .btn.big { width: 100%; padding: 14px; font-size: 17px; }
-  .linkbtn { border: 0; background: none; color: var(--accent); font-size: 13px; font-weight: 700; cursor: pointer; padding: 0 0 0 6px; }
-  input[type=text] { width: 100%; padding: 12px 14px; border-radius: 12px; border: 1.5px solid var(--line); background: var(--soft); outline: none; }
-  input:focus { border-color: var(--accent); }
-  .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 16px; box-shadow: var(--shadow); }
+  .btn.small { padding: 6px 11px; font-size: 13.5px; }
+  .btn.big { width: 100%; padding: 14px; font-size: 16px; }
+  .iconbtn { width: 36px; height: 36px; border-radius: var(--r); border: 1px solid var(--line2); background: transparent; color: var(--ink); display: grid; place-items: center; cursor: pointer; }
+  .iconbtn svg { width: 18px; height: 18px; }
+  input[type=text] { width: 100%; padding: 12px 13px; border-radius: var(--r); border: 1px solid var(--line2); background: rgba(0, 0, 0, .28); outline: none; }
+  [data-theme="light"] input[type=text] { background: #fff; }
+  input[type=text]:focus { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), 0 0 18px color-mix(in srgb, var(--accent) 18%, transparent); }
+  input::placeholder { color: color-mix(in srgb, var(--dim) 70%, transparent); }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 14px; box-shadow: var(--shadow); }
+  .sec { padding: 2px 0 0; }
   .row { display: flex; gap: 8px; align-items: center; }
 
   /* 입장 */
-  .screen { min-height: 100vh; }
-  #entry { display: flex; align-items: center; justify-content: center; padding: 20px 16px; position: relative; }
-  .topright { position: absolute; top: 12px; right: 12px; display: flex; gap: 6px; }
-  .entrycard { width: 100%; max-width: 380px; background: var(--card); border: 1px solid var(--line); border-radius: 22px; padding: 28px 24px; box-shadow: var(--shadow); text-align: center; }
-  .entrycard .logo { font-size: 48px; line-height: 1; }
-  .entrycard h1 { font-size: 26px; margin: 10px 0 4px; }
-  .entrycard .sub { margin: 0 0 20px; color: var(--dim); }
-  .entrycard label { display: block; text-align: left; font-size: 13px; color: var(--dim); margin: 14px 0 6px; }
-  .entrycard .btn.big { margin-top: 14px; }
-  .or { display: flex; align-items: center; gap: 10px; color: var(--dim); font-size: 13px; margin: 18px 0 2px; }
-  .or::before, .or::after { content: ''; flex: 1; height: 1px; background: var(--line); }
-  #roomInput { text-transform: uppercase; letter-spacing: .12em; font-weight: 700; }
-  .err { color: var(--bad); font-size: 14px; min-height: 1.4em; margin-top: 10px; }
+  #entry { min-height: 100vh; display: flex; flex-direction: column; padding: 0 0 26px; max-width: 520px; margin: 0 auto; }
+  .entry-top { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 17px; letter-spacing: -.01em; }
+  .brand svg { width: 26px; height: 26px; }
+  .entry-actions { display: flex; gap: 6px; }
+  .entry-hero { margin: 7vh 0 22px; padding: 0 18px; }
+  .entry-hero h1 { font-weight: 800; font-size: clamp(32px, 9.5vw, 44px); line-height: 1.16; letter-spacing: -.025em; margin-top: 10px; }
+  .entry-hero h1 em { font-style: normal; color: var(--accent); }
+  .entry-hero p { margin: 12px 0 0; color: var(--dim); }
+  .entry-panel { margin: auto 14px 0; background: var(--card); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 14px; box-shadow: var(--shadow); }
+  .seg { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--line2); border-radius: var(--r); overflow: hidden; }
+  .seg button { border: 0; background: transparent; padding: 10px 6px; font-weight: 700; color: var(--dim); cursor: pointer; font-size: 14px; }
+  .seg button + button { border-left: 1px solid var(--line2); }
+  .seg button.on { background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--accent); box-shadow: inset 0 -2px 0 var(--accent); }
+  .field { margin-top: 14px; }
+  .field > label { display: flex; justify-content: space-between; align-items: center; margin: 0 0 6px; }
+  .linkbtn { border: 0; background: none; color: var(--accent); font-size: 12.5px; font-weight: 700; cursor: pointer; padding: 0; }
+  .entry-panel .btn.big { margin-top: 14px; }
+  #roomInput { text-transform: uppercase; letter-spacing: .5em; font-family: var(--mono); font-weight: 600; font-size: 26px; text-align: center; padding: 10px; color: var(--accent); }
+  .err { color: var(--bad); font-size: 13.5px; min-height: 1.4em; margin: 10px 2px 0; text-align: center; }
 
   /* 방 */
-  .sticky { position: sticky; top: 0; z-index: 40; background: var(--bg); }
-  .topbar { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--line); max-width: 1100px; margin: 0 auto; }
-  .roomtag { font-size: 14px; color: var(--dim); white-space: nowrap; }
-  .roomtag b { color: var(--accent); font-size: 18px; letter-spacing: .08em; margin-left: 2px; }
+  .sticky { position: sticky; top: 0; z-index: 40; background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
+  .topbar { position: relative; display: flex; align-items: center; gap: 8px; padding: 9px 12px; max-width: 1100px; margin: 0 auto; }
+  .topbar .brand svg { width: 24px; height: 24px; }
+  .codepill { display: flex; align-items: center; gap: 8px; padding: 6px 11px; border-radius: var(--r); border: 1px solid var(--line2); background: transparent; color: var(--dim); font-family: var(--mono); font-size: 10.5px; letter-spacing: .2em; cursor: pointer; }
+  .codepill b { font-family: var(--mono); font-weight: 600; color: var(--accent); font-size: 15px; letter-spacing: .2em; }
+  .menu { position: absolute; right: 12px; top: calc(100% + 6px); background: var(--card-solid); border: 1px solid var(--line2); border-radius: var(--r-lg); box-shadow: var(--shadow); padding: 5px; min-width: 200px; z-index: 60; }
+  .menu button { display: block; width: 100%; text-align: left; padding: 11px 11px; border: 0; background: none; border-radius: var(--r); font-weight: 600; cursor: pointer; }
+  .menu button:hover { background: var(--soft); }
+  .menu button.danger { color: var(--bad); }
   #pluginBar:empty { display: none; }
+  #pluginBar > div { padding-left: max(12px, calc((100vw - 1100px) / 2 + 12px)); padding-right: max(12px, calc((100vw - 1100px) / 2 + 12px)); }
   .layout { display: grid; grid-template-columns: 1fr; gap: 12px; max-width: 1100px; margin: 0 auto; padding: 12px 12px 150px; }
+  #room[data-view="chat"] .layout { padding-bottom: 84px; }
   .main { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+  .main > .eyebrow { margin: 0 0 -6px; }
+  #lobby > * + * { margin-top: 12px; }
   .chatcol { min-width: 0; }
-  .chatbox { background: var(--card); border: 1px solid var(--line); border-radius: 16px; display: flex; flex-direction: column; height: calc(100vh - 230px); min-height: 300px; overflow: hidden; }
+  .chatbox { background: var(--card); border: 1px solid var(--line); border-radius: var(--r-lg); display: flex; flex-direction: column; height: calc(100vh - 250px); min-height: 300px; overflow: hidden; box-shadow: var(--shadow); }
+  .chathead.eyebrow { margin: 0; }
+  .chathead { padding: 9px 13px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; }
   .chatlog { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 6px; }
-  .msg { font-size: 15px; word-break: break-word; }
-  .msg .who { font-weight: 800; margin-right: 6px; }
-  .msg.sys { color: var(--dim); font-size: 13px; text-align: center; padding: 2px 0; }
-  .tag { font-size: 11px; font-weight: 700; padding: 1px 6px; border-radius: 6px; background: var(--soft); color: var(--dim); margin-right: 4px; }
-  .chatform { display: flex; gap: 8px; padding: 10px; border-top: 1px solid var(--line); }
+  .msg { font-size: 14.5px; word-break: break-word; background: var(--soft); border: 1px solid var(--line); border-radius: var(--r); padding: 6px 10px; align-self: flex-start; max-width: 90%; }
+  .msg.mine { align-self: flex-end; background: color-mix(in srgb, var(--accent) 11%, transparent); border-color: color-mix(in srgb, var(--accent) 30%, var(--line)); }
+  .msg .who { font-weight: 800; margin-right: 6px; font-size: 12.5px; }
+  .msg.sys { align-self: stretch; background: transparent; border: 0; border-left: 2px solid var(--line2); border-radius: 0; color: var(--dim); font-size: 12.5px; padding: 1px 9px; max-width: 100%; }
+  .tag { font-family: var(--mono); font-size: 9.5px; letter-spacing: .08em; padding: 1px 6px; border-radius: 3px; border: 1px solid var(--line2); color: var(--dim); margin-right: 5px; }
+  .chatform { display: flex; gap: 8px; padding: 9px; border-top: 1px solid var(--line); }
   .chatform input { flex: 1; }
 
-  .players { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; }
-  .pl { flex: 0 0 auto; min-width: 84px; background: var(--card); border: 1.5px solid var(--line); border-radius: 14px; padding: 8px 10px; text-align: center; font-size: 13px; }
-  .pl .nmc { display: block; font-size: 14px; white-space: nowrap; }
-  .pl .st { color: var(--dim); font-size: 12px; }
-  .pl.me { border-color: var(--accent); cursor: pointer; }
-  .pl.ready { background: color-mix(in srgb, var(--ok) 12%, var(--card)); }
-  .pl.off { opacity: .5; }
-  .pl.lead { border-color: #d9a500; box-shadow: 0 0 0 1.5px #d9a500 inset; }
+  .players { display: flex; gap: 8px; overflow-x: auto; padding: 2px 0 6px; scrollbar-width: none; }
+  .players::-webkit-scrollbar { display: none; }
+  .pl { flex: 0 0 auto; width: 106px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 9px; background: var(--card); border: 1px solid var(--line); border-radius: var(--r-lg); text-align: left; position: relative; }
+  .pl::before { content: ''; position: absolute; left: 0; top: 9px; bottom: 9px; width: 2px; background: var(--pc, var(--line2)); border-radius: 2px; }
+  .pl .av { width: 34px; height: 34px; border-radius: var(--r); display: grid; place-items: center; font-size: 20px; background: var(--soft); border: 1px solid var(--line2); }
+  .pl .nmc { display: block; font-weight: 800; font-size: 12.5px; max-width: 88px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pl .st { color: var(--dim); font-size: 11px; line-height: 1.25; }
+  .pl.me { border-color: color-mix(in srgb, var(--accent) 55%, var(--line)); cursor: pointer; }
+  .pl.ready .st { color: var(--ok); }
+  .pl.off { opacity: .45; }
+  .pl.lead { border-color: #d6a93a; }
 
-  .gamegrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-top: 12px; }
-  .gcard { text-align: left; border: 2px solid var(--line); background: var(--soft); border-radius: 14px; padding: 12px; cursor: pointer; display: flex; flex-direction: column; gap: 2px; }
-  .gcard.on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, var(--card)); }
-  .gcard .ge { font-size: 28px; line-height: 1.2; }
-  .gcard b { font-size: 16px; }
-  .gcard small { color: var(--dim); }
-  .gcard .gd { font-size: 13px; color: var(--dim); margin-top: 4px; }
-  .rules { margin: 10px 0 0; padding-left: 20px; font-size: 14.5px; }
-  .rules li { margin: 4px 0; }
+  .gamegrid { display: grid; grid-template-columns: 1fr; gap: 8px; margin: 8px 0 0; }
+  .gcard { position: relative; text-align: left; display: grid; grid-template-columns: auto 1fr auto; column-gap: 12px; row-gap: 2px; align-items: center; padding: 13px 14px 13px 16px; border-radius: var(--r-lg); cursor: pointer; border: 1px solid var(--line); background: var(--card); transition: border-color .15s, background .15s; overflow: hidden; }
+  .gcard::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--gc); opacity: .55; }
+  .gcard.on { border-color: color-mix(in srgb, var(--gc) 70%, var(--line)); background: linear-gradient(90deg, color-mix(in srgb, var(--gc) 13%, var(--card)), var(--card) 70%); box-shadow: 0 0 24px color-mix(in srgb, var(--gc) 14%, transparent); }
+  .gcard.on::before { opacity: 1; }
+  .gcard .gtop { display: contents; }
+  .gcard .ge { grid-row: 1 / span 3; font-size: 30px; line-height: 1; }
+  .gcard .gpill { grid-column: 3; grid-row: 1; font-family: var(--mono); font-size: 10.5px; letter-spacing: .1em; color: var(--gc); border: 1px solid color-mix(in srgb, var(--gc) 45%, transparent); padding: 2px 7px; border-radius: 3px; }
+  .gcard .gn { grid-column: 2; grid-row: 1; font-size: 16.5px; font-weight: 800; letter-spacing: -.01em; }
+  .gcard .gd { grid-column: 2 / span 2; grid-row: 2; font-size: 13px; color: var(--dim); }
+  .gcard .gpick { grid-column: 2 / span 2; grid-row: 3; font-family: var(--mono); font-size: 10px; letter-spacing: .16em; color: var(--gc); text-transform: uppercase; }
+  .rules { margin: 10px 0 0; padding-left: 18px; font-size: 14px; }
+  .rules li { margin: 5px 0; }
 
-  .hubbar { position: fixed; left: 0; right: 0; bottom: calc(58px + env(safe-area-inset-bottom)); z-index: 35; display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; align-items: center; padding: 10px 12px; background: color-mix(in srgb, var(--bg) 92%, transparent); border-top: 1px solid var(--line); backdrop-filter: blur(6px); }
-  .hubbar .btn { flex: 1 1 0; max-width: 200px; }
-  .hbnote { width: 100%; text-align: center; font-size: 13px; color: var(--dim); }
-  .tabbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 36; display: flex; background: var(--card); border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom); }
-  .tabbar button { flex: 1; border: 0; background: none; padding: 14px 0; font-weight: 700; color: var(--dim); position: relative; cursor: pointer; }
-  .tabbar button.on { color: var(--accent); box-shadow: inset 0 -3px 0 var(--accent); }
-  .tabbar i { position: absolute; top: 8px; margin-left: 4px; background: var(--accent); color: #fff; font-style: normal; font-size: 11px; padding: 1px 6px; border-radius: 10px; }
+  .hubbar { position: fixed; left: 0; right: 0; bottom: calc(56px + env(safe-area-inset-bottom)); z-index: 35; display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; align-items: center; padding: 9px 12px; background: color-mix(in srgb, var(--bg) 94%, transparent); border-top: 1px solid var(--line2); backdrop-filter: blur(10px); }
+  .hubbar .btn { flex: 1 1 0; max-width: 220px; }
+  .hubbar.slim { padding: 6px 12px; gap: 6px; }
+  .hubbar.slim .btn { padding: 7px 10px; font-size: 13.5px; }
+  .hbnote { width: 100%; text-align: center; font-size: 12px; color: var(--dim); }
+  .tabbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 36; display: grid; grid-template-columns: 1fr 1fr; background: var(--bg); border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom); }
+  .tabbar button { border: 0; background: transparent; padding: 13px 0; font-weight: 700; color: var(--dim); position: relative; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 7px; font-size: 14px; }
+  .tabbar button + button { border-left: 1px solid var(--line); }
+  .tabbar button svg { width: 18px; height: 18px; }
+  .tabbar button.on { color: var(--accent); box-shadow: inset 0 2px 0 var(--accent); background: color-mix(in srgb, var(--accent) 7%, transparent); }
+  .tabbar i { background: var(--bad); color: #fff; font-style: normal; font-family: var(--mono); font-size: 10.5px; font-weight: 600; padding: 0 6px; border-radius: 3px; }
   #room[data-view="game"] .chatcol { display: none; }
   #room[data-view="chat"] .main, #room[data-view="chat"] .hubbar { display: none; }
-  #room[data-view="chat"] .chatbox { height: calc(100vh - 190px); }
+  #room[data-view="chat"] .chatbox { height: calc(100vh - var(--top, 64px) - 96px); height: calc(100dvh - var(--top, 64px) - 96px); }
 
   @media (min-width: 900px) {
-    .layout { grid-template-columns: minmax(0, 1fr) 340px; padding-bottom: 90px; align-items: start; }
+    .layout { grid-template-columns: minmax(0, 1fr) 350px; padding-bottom: 96px; align-items: start; }
     #room[data-view="game"] .chatcol, #room[data-view="chat"] .chatcol, #room[data-view="chat"] .main { display: block; }
     #room[data-view="chat"] .hubbar { display: flex; }
     .chatcol { position: sticky; top: 74px; }
-    .chatbox, #room[data-view="chat"] .chatbox { height: calc(100vh - 190px); }
+    .chatbox, #room[data-view="chat"] .chatbox { height: calc(100vh - var(--top, 64px) - 110px); }
     .tabbar { display: none; }
     .hubbar { bottom: 0; }
+    .gamegrid { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
   }
 
-  /* 알림/모달 */
-  .toast { position: fixed; left: 50%; bottom: 150px; transform: translateX(-50%); background: #2b2621; color: #fff; padding: 10px 16px; border-radius: 12px; z-index: 90; max-width: 90%; font-size: 14px; box-shadow: var(--shadow); }
-  .banner { position: fixed; top: 0; left: 0; right: 0; z-index: 95; background: var(--warn); color: #fff; text-align: center; padding: 6px; font-size: 14px; font-weight: 700; }
-  .overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, .45); z-index: 80; display: flex; align-items: center; justify-content: center; padding: 16px; }
-  .modal { background: var(--card); border-radius: 18px; padding: 20px; width: 100%; max-width: 420px; max-height: 85vh; overflow-y: auto; box-shadow: var(--shadow); }
-  .modal h3 { margin-bottom: 10px; font-size: 18px; }
+  /* 알림 / 모달 */
+  .toast { position: fixed; left: 50%; bottom: 128px; transform: translateX(-50%); background: #e7eaf0; color: #0b0d11; padding: 9px 16px; border-radius: var(--r); z-index: 90; max-width: 90%; font-size: 13.5px; font-weight: 700; box-shadow: var(--shadow); }
+  .banner { position: fixed; top: 0; left: 0; right: 0; z-index: 95; background: var(--warn); color: #1c1400; text-align: center; padding: 6px; font-size: 13.5px; font-weight: 800; }
+  .overlay { position: fixed; inset: 0; background: rgba(3, 4, 8, .7); backdrop-filter: blur(3px); z-index: 80; display: flex; align-items: center; justify-content: center; padding: 16px; }
+  .modal { background: var(--card-solid); border: 1px solid var(--line2); border-radius: var(--r-lg); padding: 20px; width: 100%; max-width: 430px; max-height: 85vh; overflow-y: auto; box-shadow: var(--shadow); }
+  .modal h3 { margin-bottom: 12px; font-size: 18px; }
   .modal .actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
-  .note-ver { font-weight: 800; }
-  .note-date { color: var(--dim); font-size: 13px; margin-left: 6px; }
-  .note ul { margin: 6px 0 14px; padding-left: 20px; font-size: 14.5px; }
+  .note-ver { font-family: var(--mono); font-size: 14px; color: var(--accent); letter-spacing: .08em; }
+  .note-date { font-family: var(--mono); color: var(--dim); font-size: 11.5px; margin-left: 8px; }
+  .note ul { margin: 6px 0 14px; padding-left: 18px; font-size: 14px; }
 </style>
 </head>
 <body>
 <div class="banner" id="banner" hidden>연결이 끊겼어요. 다시 연결하는 중…</div>
 <div class="toast" id="toast" hidden></div>
 
-<!-- 입장: 닉네임은 자동으로 채워져 있고, 버튼 한 번이면 방이 만들어져요 -->
+<!-- 입장: 큰 제목 + 아래에서 올라온 패널. 초대 링크로 오면 ‘코드로 입장’이 바로 열려요 -->
 <main class="screen" id="entry">
-  <div class="topright">
-    <button class="btn small ghost" id="entryNote">패치노트</button>
-    <button class="btn small ghost" id="entryTheme">🌙</button>
+  <div class="entry-top">
+    <div class="brand">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" style="color:var(--accent)"><rect x="2.5" y="2.5" width="19" height="19" rx="4"/><circle cx="9" cy="10" r="1.7" fill="currentColor" stroke="none"/><circle cx="15" cy="10" r="1.7" fill="currentColor" stroke="none"/><path d="M8.2 15.4c2.3 2.1 5.3 2.1 7.6 0"/></svg>
+      게임방
+    </div>
+    <div class="entry-actions">
+      <button class="btn small ghost" id="entryNote">패치노트</button>
+      <button class="btn small ghost" id="entryTheme">☀️</button>
+    </div>
   </div>
-  <div class="entrycard">
-    <div class="logo">🎲</div>
-    <h1>게임방</h1>
-    <p class="sub">친구들이랑 바로 한 판</p>
-    <label for="nick">닉네임<button class="linkbtn" id="btnDice" type="button">🎲 다시 뽑기</button></label>
-    <input type="text" id="nick" maxlength="12" autocomplete="off" placeholder="닉네임">
-    <button class="btn primary big" id="btnCreate">방 만들기</button>
-    <div class="or"><span>또는</span></div>
-    <label for="roomInput">방 코드</label>
-    <div class="row">
-      <input type="text" id="roomInput" maxlength="4" autocomplete="off" autocapitalize="characters" placeholder="예: KA6M">
-      <button class="btn" id="btnJoin">입장</button>
+  <div class="entry-hero">
+    <div class="eyebrow"><span>ROOM ACCESS</span><b>ONLINE</b></div>
+    <h1>오늘은<br><em>뭐 하고</em> 놀까?</h1>
+    <p>링크 하나면 친구들이 바로 모여요.</p>
+  </div>
+  <section class="entry-panel">
+    <div class="seg" id="entrySeg">
+      <button data-mode="create" class="on">새 방 만들기</button>
+      <button data-mode="join">코드로 입장</button>
+    </div>
+    <div class="field">
+      <label for="nick"><span class="mono">NICKNAME</span><button class="linkbtn" id="btnDice" type="button">🎲 다시 뽑기</button></label>
+      <input type="text" id="nick" maxlength="12" autocomplete="off" placeholder="닉네임">
+    </div>
+    <div id="paneCreate">
+      <button class="btn primary big" id="btnCreate">방 만들기</button>
+    </div>
+    <div id="paneJoin" hidden>
+      <div class="field">
+        <label for="roomInput"><span class="mono">ROOM CODE · 4자리</span></label>
+        <input type="text" id="roomInput" maxlength="4" autocomplete="off" autocapitalize="characters" placeholder="----">
+      </div>
+      <button class="btn primary big" id="btnJoin">입장하기</button>
     </div>
     <div class="err" id="entryErr"></div>
-  </div>
+  </section>
 </main>
 
 <!-- 방 -->
 <div class="screen" id="room" data-view="game" hidden>
-  <div class="sticky">
+  <div class="sticky" id="stickyTop">
     <header class="topbar">
-      <div class="roomtag">방 코드 <b id="roomCode">----</b></div>
-      <button class="btn small" id="btnShare">초대 링크 복사</button>
+      <div class="brand"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" style="color:var(--accent)"><rect x="2.5" y="2.5" width="19" height="19" rx="4"/><circle cx="9" cy="10" r="1.7" fill="currentColor" stroke="none"/><circle cx="15" cy="10" r="1.7" fill="currentColor" stroke="none"/><path d="M8.2 15.4c2.3 2.1 5.3 2.1 7.6 0"/></svg></div>
+      <button class="codepill" id="btnCode" title="눌러서 방 코드 복사">ROOM <b id="roomCode">----</b></button>
       <span class="grow"></span>
-      <button class="btn small ghost" id="btnNote">패치노트</button>
-      <button class="btn small ghost" id="btnTheme">🌙</button>
-      <button class="btn small ghost" id="btnLeave">나가기</button>
+      <button class="iconbtn" id="btnShare" title="초대 링크 보내기" aria-label="초대 링크 보내기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="2.6"/><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="19" r="2.6"/><path d="M8.3 10.8l7.4-4.4M8.3 13.2l7.4 4.4"/></svg></button>
+      <button class="iconbtn" id="btnMenu" title="메뉴" aria-label="메뉴"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button>
+      <div class="menu" id="menu" hidden>
+        <button id="btnNote">📋 패치노트</button>
+        <button id="btnTheme">☀️ 밝은 화면으로</button>
+        <button id="btnLeave" class="danger">🚪 방에서 나가기</button>
+      </div>
     </header>
     <div id="pluginBar"></div>
   </div>
   <div class="layout" id="layout">
     <section class="main" id="mainCol">
+      <div class="eyebrow"><span>PLAYERS</span><b id="pcount">0</b></div>
       <div class="players" id="players"></div>
       <div id="lobby" hidden></div>
       <div id="gameHost" hidden></div>
     </section>
     <aside class="chatcol" id="chatCol">
       <div class="chatbox">
+        <div class="chathead eyebrow"><span>CHAT</span><b>ALL</b></div>
         <div class="chatlog" id="chatlog"></div>
         <form class="chatform" id="chatForm" autocomplete="off">
           <input type="text" id="chatInput" maxlength="200" placeholder="메시지 입력" autocomplete="off">
@@ -183,8 +266,8 @@
   </div>
   <div class="hubbar" id="hubBar"></div>
   <nav class="tabbar" id="tabbar">
-    <button data-tab="game" class="on">🎮 게임</button>
-    <button data-tab="chat">💬 채팅<i id="unread" hidden>0</i></button>
+    <button data-tab="game" class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="12" rx="4"/><path d="M8 10v4M6 12h4"/><circle cx="16" cy="11" r=".8" fill="currentColor"/><circle cx="18" cy="13" r=".8" fill="currentColor"/></svg>게임</button>
+    <button data-tab="chat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H9l-5 4z"/></svg>채팅<i id="unread" hidden>0</i></button>
   </nav>
 </div>
 
@@ -215,6 +298,7 @@
       '스파이폴이 ‘우리가 있는 곳은?’으로 이름이 바뀌었어요. 규칙은 그대로예요.',
       '새 게임 ‘오늘도 이 마을엔 피가 흐른다’가 추가됐어요. 숨은 직업으로 악마를 찾는 5~10명 추리 게임이에요.',
       '앞으로 게임을 계속 추가할 수 있게 구조를 바꿨어요.',
+      '화면 디자인을 새로 바꿨어요. 수사 파일 같은 어두운 화면이 기본이고, 메뉴(⋯)에서 밝은 화면으로 바꿀 수 있어요.',
     ] },
   ];
 
@@ -234,7 +318,8 @@
   let unread = 0;
   let mounted = null;        // 지금 화면에 올라간 게임 { id, no }
   let entering = false;
-  let booting = false;       // 저장된 방으로 자동 재접속을 시도하는 중
+  let booting = false;
+  let lastSelected = null;   // 대기실에서 마지막으로 그린 게임 선택       // 저장된 방으로 자동 재접속을 시도하는 중
 
   /* ───────── 공통 도우미 ───────── */
   let toastTimer = null;
@@ -251,9 +336,10 @@
 
   function applyTheme(t) {
     document.documentElement.dataset.theme = t;
-    const icon = t === 'dark' ? '☀️' : '🌙';
-    $('#btnTheme').textContent = icon;
-    $('#entryTheme').textContent = icon;
+    $('#btnTheme').textContent = t === 'dark' ? '☀️ 밝은 화면으로' : '🌙 어두운 화면으로';
+    $('#entryTheme').textContent = t === 'dark' ? '☀️' : '🌙';
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.content = t === 'dark' ? '#0b0d11' : '#f1f3f6';
     ls.set(K.theme, t);
   }
   function toggleTheme() { applyTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'); }
@@ -301,6 +387,15 @@
     setView('game');
     showRoom();
   }
+  let mode = 'create';
+  function setMode(m) {
+    mode = m;
+    $('#paneCreate').hidden = m !== 'create';
+    $('#paneJoin').hidden = m !== 'join';
+    $$('[data-mode]').forEach((b) => b.classList.toggle('on', b.dataset.mode === m));
+    $('#entryErr').textContent = '';
+  }
+  $$('[data-mode]').forEach((b) => { b.onclick = () => setMode(b.dataset.mode); });
   $('#btnCreate').onclick = () => enter('create');
   $('#btnJoin').onclick = () => {
     const code = $('#roomInput').value.trim().toUpperCase();
@@ -308,7 +403,7 @@
     enter('join', { room: code });
   };
   $('#roomInput').onkeydown = (e) => { if (e.key === 'Enter') $('#btnJoin').onclick(); };
-  $('#nick').onkeydown = (e) => { if (e.key === 'Enter') ($('#roomInput').value.trim() ? $('#btnJoin') : $('#btnCreate')).onclick(); };
+  $('#nick').onkeydown = (e) => { if (e.key === 'Enter') (mode === 'join' ? $('#btnJoin') : $('#btnCreate')).onclick(); };
   $('#btnDice').onclick = () => { $('#nick').value = randomNick(); };
   $('#entryNote').onclick = showNotes;
   $('#entryTheme').onclick = toggleTheme;
@@ -335,6 +430,14 @@
     }
     try { await navigator.clipboard.writeText(url); toast('초대 링크를 복사했어요!'); } catch (e) { toast(url); }
   };
+  const closeMenu = () => { $('#menu').hidden = true; };
+  $('#btnMenu').onclick = (e) => { if (e && e.stopPropagation) e.stopPropagation(); $('#menu').hidden = !$('#menu').hidden; };
+  $('#menu').onclick = closeMenu;
+  if (typeof document.addEventListener === 'function') document.addEventListener('click', (e) => { if (!$('#menu').hidden && !(e && e.target && e.target.closest && e.target.closest('#menu'))) closeMenu(); });
+  $('#btnCode').onclick = async () => {
+    if (!S) return;
+    try { await navigator.clipboard.writeText(S.code); toast(`방 코드 ${S.code}를 복사했어요!`); } catch (e) { toast(`방 코드: ${S.code}`); }
+  };
   $('#btnLeave').onclick = () => {
     if (!confirm('방에서 나갈까요?')) return;
     socket.emit('leave');
@@ -345,13 +448,14 @@
 
   /* ───────── 플레이어 / 대기실 / 하단 버튼 ───────── */
   function renderPlayers() {
+    $('#pcount').textContent = String(S.players.length);
     $('#players').innerHTML = S.players.map((p) => {
       let st = '';
       if (!p.connected) st = '연결 끊김';
       else if (S.phase === 'lobby' || S.finished) st = p.ready ? '준비 ✓' : '대기';
       else st = p.inGame ? '참가 중' : (p.ready ? '다음 판 참가' : '관전');
       const cls = ['pl', p.id === S.you ? 'me' : '', p.ready && (S.phase === 'lobby' || S.finished) ? 'ready' : '', p.connected ? '' : 'off', leaderIds.has(p.id) ? 'lead' : ''].filter(Boolean).join(' ');
-      return `<div class="${cls}" ${p.id === S.you ? 'id="meChip" title="눌러서 닉네임 바꾸기"' : ''}>${nm(p)}<span class="st">${esc(st)}${p.score ? ` · ${p.score}점` : ''}${p.id === S.you ? ' · 나' : ''}</span></div>`;
+      return `<div class="${cls}" style="--pc:${esc(p.color)}" ${p.id === S.you ? 'id="meChip" title="눌러서 닉네임 바꾸기"' : ''}><span class="av">${esc(p.avatar)}</span><span class="nmc" style="color:${esc(p.color)}">${esc(p.name)}${crown(p.id)}</span><span class="st">${esc(st)}${p.score ? ` · ${p.score}점` : ''}${p.id === S.you ? ' · 나' : ''}</span></div>`;
     }).join('');
     const me = $('#meChip');
     if (me) me.onclick = renameModal;
@@ -379,15 +483,24 @@
     if (S.phase !== 'lobby') { el.hidden = true; return; }
     el.hidden = false;
     const sel = S.games.find((g) => g.id === S.selected);
-    el.innerHTML = `<div class="card"><h2>대기실</h2>
+    const oldGrid = $('#gameGrid');
+    const keepLeft = oldGrid ? oldGrid.scrollLeft : 0;
+    const changed = lastSelected !== S.selected;
+    lastSelected = S.selected;
+    el.innerHTML = `<div class="sec"><div class="eyebrow"><span>LOBBY · SELECT GAME</span><b>${S.games.length} GAME${S.games.length > 1 ? 'S' : ''}</b></div><h2>대기실</h2>
         <p class="hint">${S.games.length > 1 ? '게임 카드를 눌러 고르세요. 누구든 바로 바꿀 수 있어요.' : '새 게임이 추가되면 여기에 카드가 늘어나요.'}</p>
-        <div class="gamegrid">${S.games.map((g) => `<button class="gcard${g.id === S.selected ? ' on' : ''}" data-game="${esc(g.id)}"><span class="ge">${esc(g.emoji)}</span><b>${esc(g.name)}</b><small>${g.min}~${g.max}명</small><span class="gd">${esc(g.desc)}</span></button>`).join('')}</div></div>
-      <div class="card"><h3>${esc(sel.emoji)} ${esc(sel.name)} 규칙</h3>
+        <div class="gamegrid" id="gameGrid">${S.games.map((g) => `<button class="gcard${g.id === S.selected ? ' on' : ''}" data-game="${esc(g.id)}" style="--gc:${esc(g.accent)}"><span class="gtop"><span class="ge">${esc(g.emoji)}</span><span class="gpill">${g.min}~${g.max}명</span></span><b class="gn">${esc(g.name)}</b><span class="gd">${esc(g.desc)}</span>${g.id === S.selected ? '<span class="gpick">SELECTED ✓</span>' : ''}</button>`).join('')}</div></div>
+      <div class="card"><div class="eyebrow"><span>RULES</span><b>${sel.min}–${sel.max} PLAYERS</b></div><h3>${esc(sel.emoji)} ${esc(sel.name)} 규칙</h3>
         <ul class="rules">${sel.rules.map((r) => `<li>${esc(r)}</li>`).join('')}</ul>
         <p class="hint">친구들에게 방 코드 <b>${esc(S.code)}</b> 또는 초대 링크를 보내세요. ${sel.min}~${sel.max}명이 ‘준비’를 누르면 시작할 수 있어요.</p></div>`;
     $$('[data-game]').forEach((b) => {
       b.onclick = async () => { const r = await call('select', { game: b.dataset.game }); if (r && !r.ok) toast(r.error); };
     });
+    const grid = $('#gameGrid');
+    if (grid) {
+      grid.scrollLeft = keepLeft;   // 다른 사람이 준비를 눌러도 카드 위치가 튕기지 않게
+      if (changed) $$('[data-game]').forEach((b) => { if (b.dataset.game === S.selected && b.scrollIntoView) b.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' }); });
+    }
   }
 
   function renderHubBar() {
@@ -401,7 +514,9 @@
     let note;
     if (lobbyLike) note = `${esc(sel.name)} · 준비 ${S.readyCount}명 (${sel.min}~${sel.max}명 필요)${me.ready ? '' : ' — 준비를 눌러 주세요'}`;
     else note = S.spectator ? '관전 중이에요. 준비를 눌러 두면 다음 판에 참가해요.' : `${esc(sel.name)} 진행 중`;
-    html += `<div class="hbnote" id="hbNote">${note}</div>`;
+    const running = S.phase === 'game' && !S.finished;
+    if (!running || S.spectator) html += `<div class="hbnote" id="hbNote">${note}</div>`;   // 게임 중에는 안내 문구를 줄여요
+    $('#hubBar').className = `hubbar${running ? ' slim' : ''}`;
     $('#hubBar').innerHTML = html;
     $('#hbReady').onclick = () => socket.emit('ready');
     const st = $('#hbStart');
@@ -452,7 +567,7 @@
   function chatLine(m) {
     const d = document.createElement('div');
     if (m.sys) { d.className = 'msg sys'; d.textContent = m.text; return d; }
-    d.className = 'msg';
+    d.className = S && m.pid === S.you ? 'msg mine' : 'msg';
     const who = document.createElement('span');
     who.className = 'who';
     who.style.color = m.color;
@@ -479,6 +594,7 @@
     $$('[data-tab]').forEach((b) => b.classList.toggle('on', b.dataset.tab === v));
     if (v === 'chat') { unread = 0; renderUnread(); chatlog.scrollTop = chatlog.scrollHeight; }
     if (S && S.phase === 'game') renderGame();   // 투표 바 등은 탭에 따라 모양이 달라져요
+    syncTop();
   }
   $$('[data-tab]').forEach((b) => { b.onclick = () => setView(b.dataset.tab); });
   $('#chatForm').onsubmit = (e) => {
@@ -491,6 +607,12 @@
   };
 
   /* ───────── 서버 이벤트 ───────── */
+  function syncTop() {
+    const st = document.querySelector('#stickyTop');
+    const root = document.documentElement;
+    if (st && st.offsetHeight && root.style && typeof root.style.setProperty === 'function') root.style.setProperty('--top', `${st.offsetHeight}px`);
+  }
+  if (typeof window.addEventListener === 'function') window.addEventListener('resize', syncTop);
   socket.on('state', (s) => {
     S = s;
     offset = s.now - Date.now();
@@ -502,6 +624,7 @@
     renderLobby();
     renderGame();
     renderHubBar();
+    syncTop();
   });
   socket.on('chatlog', (list) => { chatlog.innerHTML = ''; list.forEach(addChat); chatlog.scrollTop = chatlog.scrollHeight; unread = 0; renderUnread(); });
   socket.on('chat', addChat);
@@ -518,9 +641,9 @@
   });
 
   /* ───────── 시작 ───────── */
-  applyTheme(ls.get(K.theme) || ((typeof matchMedia === 'function' && matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light'));
+  applyTheme(ls.get(K.theme) || 'dark');
   $('#nick').value = ls.get(K.name) || randomNick();
-  if (urlRoom) $('#roomInput').value = urlRoom;
+  if (urlRoom) { $('#roomInput').value = urlRoom; setMode('join'); }
   if (ls.get(K.token) && ls.get(K.room) && (!urlRoom || urlRoom === ls.get(K.room))) {
     // 저장된 방이 있으면 입장 카드를 깜빡이지 않고 바로 이어서 들어가요
     booting = true;

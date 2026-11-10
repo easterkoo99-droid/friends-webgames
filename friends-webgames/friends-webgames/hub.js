@@ -65,7 +65,7 @@ module.exports = function registerHub(io) {
       hostId: room.hostId,
       phase: room.phase,                 // 'lobby' | 'game'
       gameNo: room.gameNo,
-      games: PLUGINS.map((p) => ({ id: p.id, name: p.name, emoji: p.emoji, desc: p.desc, rules: p.rules || [], min: p.min, max: p.max })),
+      games: PLUGINS.map((p) => ({ id: p.id, name: p.name, emoji: p.emoji, accent: p.accent || '#7c6cff', desc: p.desc, rules: p.rules || [], min: p.min, max: p.max })),
       selected: room.gameId,
       switchLocked: CFG.HOST_ONLY_SWITCH && me && me.id !== room.hostId,
       players: room.players.map((p) => ({
