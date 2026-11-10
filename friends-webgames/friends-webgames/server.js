@@ -14,11 +14,10 @@ const io = new Server(server, {
 app.use(express.static(path.join(__dirname, 'public')));
 app.get('/healthz', (_req, res) => res.type('text').send('ok'));
 
-// 게임별 소켓 이벤트 등록 (방 상태는 서버 메모리에 보관)
-require('./games/spyfall')(io);
-require('./games/quizparty')(io);
+// 방/채팅/게임 선택은 hub.js, 게임별 규칙은 games/ 폴더의 플러그인이 맡아요 (방 상태는 서버 메모리에 보관)
+require('./hub')(io);
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-  console.log(`[webgames] listening on :${PORT}`);
+  console.log(`[gameroom] listening on :${PORT}`);
 });

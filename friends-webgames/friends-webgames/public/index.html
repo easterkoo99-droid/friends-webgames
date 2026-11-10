@@ -1,63 +1,534 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="ko" data-theme="light">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>친구들과 웹게임</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Do+Hyeon&family=Gowun+Batang:wght@700&family=Noto+Sans+KR:wght@400;500&display=swap" rel="stylesheet">
+<meta name="theme-color" content="#f6f3ee">
+<title>게임방</title>
 <style>
-  * { box-sizing: border-box; }
-  html, body { margin: 0; height: 100%; }
-  body { font-family: 'Noto Sans KR', system-ui, sans-serif; background: #12151d; color: #e8e6df; }
-  .wrap { min-height: 100%; display: grid; grid-template-rows: auto 1fr; }
-  header { padding: 28px 24px 8px; text-align: center; }
-  header h1 { margin: 0; font-size: 20px; font-weight: 500; letter-spacing: .04em; color: #aab0bd; }
-  .games { display: grid; grid-template-columns: 1fr; }
-  @media (min-width: 760px) { .games { grid-template-columns: 1fr 1fr; } }
-  a.game {
-    position: relative; display: flex; flex-direction: column; justify-content: center; gap: 12px;
-    padding: 48px 36px; min-height: 320px; text-decoration: none; color: inherit; overflow: hidden;
-    transition: filter .2s;
+  :root {
+    --bg: #f6f3ee; --card: #ffffff; --ink: #241f1a; --dim: #7a7167; --line: #e6dfd5; --soft: #f0ebe3;
+    --accent: #e4493d; --accent-ink: #ffffff; --ok: #1f9d6a; --warn: #d98a00; --bad: #d23b3b;
+    --shadow: 0 6px 24px rgba(60, 40, 20, .08);
+    --font: Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', system-ui, sans-serif;
   }
-  a.game:hover { filter: brightness(1.08); }
-  a.game:focus-visible { outline: 3px solid #fff8; outline-offset: -8px; }
-  a.game h2 { margin: 0; font-size: clamp(40px, 7vw, 64px); line-height: 1.05; }
-  a.game p { margin: 0; max-width: 30ch; font-size: 16px; line-height: 1.6; }
-  a.game .meta { font-size: 14px; opacity: .75; }
-  a.game .go { margin-top: 10px; font-weight: 500; text-decoration: underline; text-underline-offset: 5px; }
+  [data-theme="dark"] {
+    --bg: #171411; --card: #231f19; --ink: #f4ede4; --dim: #a79c8e; --line: #3a342b; --soft: #2d281f;
+    --accent: #ee5a4d; --ok: #3fc088; --warn: #f0a824; --bad: #ef6a6a;
+    --shadow: 0 6px 24px rgba(0, 0, 0, .4);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font); font-size: 16px; line-height: 1.5; }
+  button, input { font-family: inherit; font-size: inherit; color: inherit; }
+  [hidden] { display: none !important; }
+  h1, h2, h3 { margin: 0; line-height: 1.3; }
+  h2 { font-size: 20px; } h3 { font-size: 16px; }
+  .hint { color: var(--dim); font-size: 14px; margin: 6px 0 0; }
+  .grow { flex: 1; }
 
-  .qp { background: radial-gradient(800px 360px at 50% -60px, rgba(255,210,63,.22), transparent 70%), #0d1f35; color: #eef3fb; }
-  .qp h2 { font-family: 'Black Han Sans', sans-serif; font-weight: 400; color: #ffd23f; text-shadow: 0 4px 0 rgba(0,0,0,.4); }
-  .qp .bulbs { position: absolute; right: 24px; bottom: 34px; width: 170px; height: 110px; border-radius: 14px; background: #0a1b30; box-shadow: inset 0 0 0 2px #1d4a73; transform: rotate(5deg); }
-  .qp .bulbs::before { content: ''; position: absolute; inset: -8px; border-radius: 20px; padding: 8px; -webkit-mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0); mask-composite: exclude; background: radial-gradient(circle at 7px 7px, #ffd23f 3px, transparent 4px) 0 0 / 22px 22px; }
-  .qp .bulbs i { position: absolute; inset: 0; display: grid; place-items: center; font-family: 'Black Han Sans', sans-serif; font-style: normal; font-size: 44px; color: #ffd23f; }
-  .sp { background: repeating-linear-gradient(0deg, rgba(255,255,255,.02) 0 2px, transparent 2px 6px), #232a38; color: #d6dbe6; }
-  .sp h2 { font-family: 'Do Hyeon', sans-serif; font-weight: 400; color: #dccb94; letter-spacing: .04em; }
-  .sp .stamp { position: absolute; right: 28px; bottom: 40px; transform: rotate(-12deg); font-family: 'Do Hyeon', sans-serif; font-size: 54px;
-    color: #c0392f; border: 4px solid #c0392f; padding: 0 16px; border-radius: 6px; opacity: .8; letter-spacing: .1em; }
+  /* 버튼/입력 */
+  .btn { border: 1.5px solid var(--line); background: var(--card); color: var(--ink); border-radius: 12px; padding: 11px 16px; font-weight: 700; cursor: pointer; touch-action: manipulation; }
+  .btn:disabled { opacity: .45; cursor: default; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  .btn.danger { color: var(--bad); border-color: var(--bad); }
+  .btn.ghost { background: transparent; }
+  .btn.small { padding: 7px 11px; font-size: 14px; border-radius: 10px; }
+  .btn.big { width: 100%; padding: 14px; font-size: 17px; }
+  .linkbtn { border: 0; background: none; color: var(--accent); font-size: 13px; font-weight: 700; cursor: pointer; padding: 0 0 0 6px; }
+  input[type=text] { width: 100%; padding: 12px 14px; border-radius: 12px; border: 1.5px solid var(--line); background: var(--soft); outline: none; }
+  input:focus { border-color: var(--accent); }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 16px; box-shadow: var(--shadow); }
+  .row { display: flex; gap: 8px; align-items: center; }
+
+  /* 입장 */
+  .screen { min-height: 100vh; }
+  #entry { display: flex; align-items: center; justify-content: center; padding: 20px 16px; position: relative; }
+  .topright { position: absolute; top: 12px; right: 12px; display: flex; gap: 6px; }
+  .entrycard { width: 100%; max-width: 380px; background: var(--card); border: 1px solid var(--line); border-radius: 22px; padding: 28px 24px; box-shadow: var(--shadow); text-align: center; }
+  .entrycard .logo { font-size: 48px; line-height: 1; }
+  .entrycard h1 { font-size: 26px; margin: 10px 0 4px; }
+  .entrycard .sub { margin: 0 0 20px; color: var(--dim); }
+  .entrycard label { display: block; text-align: left; font-size: 13px; color: var(--dim); margin: 14px 0 6px; }
+  .entrycard .btn.big { margin-top: 14px; }
+  .or { display: flex; align-items: center; gap: 10px; color: var(--dim); font-size: 13px; margin: 18px 0 2px; }
+  .or::before, .or::after { content: ''; flex: 1; height: 1px; background: var(--line); }
+  #roomInput { text-transform: uppercase; letter-spacing: .12em; font-weight: 700; }
+  .err { color: var(--bad); font-size: 14px; min-height: 1.4em; margin-top: 10px; }
+
+  /* 방 */
+  .sticky { position: sticky; top: 0; z-index: 40; background: var(--bg); }
+  .topbar { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--line); max-width: 1100px; margin: 0 auto; }
+  .roomtag { font-size: 14px; color: var(--dim); white-space: nowrap; }
+  .roomtag b { color: var(--accent); font-size: 18px; letter-spacing: .08em; margin-left: 2px; }
+  #pluginBar:empty { display: none; }
+  .layout { display: grid; grid-template-columns: 1fr; gap: 12px; max-width: 1100px; margin: 0 auto; padding: 12px 12px 150px; }
+  .main { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+  .chatcol { min-width: 0; }
+  .chatbox { background: var(--card); border: 1px solid var(--line); border-radius: 16px; display: flex; flex-direction: column; height: calc(100vh - 230px); min-height: 300px; overflow: hidden; }
+  .chatlog { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 6px; }
+  .msg { font-size: 15px; word-break: break-word; }
+  .msg .who { font-weight: 800; margin-right: 6px; }
+  .msg.sys { color: var(--dim); font-size: 13px; text-align: center; padding: 2px 0; }
+  .tag { font-size: 11px; font-weight: 700; padding: 1px 6px; border-radius: 6px; background: var(--soft); color: var(--dim); margin-right: 4px; }
+  .chatform { display: flex; gap: 8px; padding: 10px; border-top: 1px solid var(--line); }
+  .chatform input { flex: 1; }
+
+  .players { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; }
+  .pl { flex: 0 0 auto; min-width: 84px; background: var(--card); border: 1.5px solid var(--line); border-radius: 14px; padding: 8px 10px; text-align: center; font-size: 13px; }
+  .pl .nmc { display: block; font-size: 14px; white-space: nowrap; }
+  .pl .st { color: var(--dim); font-size: 12px; }
+  .pl.me { border-color: var(--accent); cursor: pointer; }
+  .pl.ready { background: color-mix(in srgb, var(--ok) 12%, var(--card)); }
+  .pl.off { opacity: .5; }
+  .pl.lead { border-color: #d9a500; box-shadow: 0 0 0 1.5px #d9a500 inset; }
+
+  .gamegrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-top: 12px; }
+  .gcard { text-align: left; border: 2px solid var(--line); background: var(--soft); border-radius: 14px; padding: 12px; cursor: pointer; display: flex; flex-direction: column; gap: 2px; }
+  .gcard.on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, var(--card)); }
+  .gcard .ge { font-size: 28px; line-height: 1.2; }
+  .gcard b { font-size: 16px; }
+  .gcard small { color: var(--dim); }
+  .gcard .gd { font-size: 13px; color: var(--dim); margin-top: 4px; }
+  .rules { margin: 10px 0 0; padding-left: 20px; font-size: 14.5px; }
+  .rules li { margin: 4px 0; }
+
+  .hubbar { position: fixed; left: 0; right: 0; bottom: calc(58px + env(safe-area-inset-bottom)); z-index: 35; display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; align-items: center; padding: 10px 12px; background: color-mix(in srgb, var(--bg) 92%, transparent); border-top: 1px solid var(--line); backdrop-filter: blur(6px); }
+  .hubbar .btn { flex: 1 1 0; max-width: 200px; }
+  .hbnote { width: 100%; text-align: center; font-size: 13px; color: var(--dim); }
+  .tabbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 36; display: flex; background: var(--card); border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom); }
+  .tabbar button { flex: 1; border: 0; background: none; padding: 14px 0; font-weight: 700; color: var(--dim); position: relative; cursor: pointer; }
+  .tabbar button.on { color: var(--accent); box-shadow: inset 0 -3px 0 var(--accent); }
+  .tabbar i { position: absolute; top: 8px; margin-left: 4px; background: var(--accent); color: #fff; font-style: normal; font-size: 11px; padding: 1px 6px; border-radius: 10px; }
+  #room[data-view="game"] .chatcol { display: none; }
+  #room[data-view="chat"] .main, #room[data-view="chat"] .hubbar { display: none; }
+  #room[data-view="chat"] .chatbox { height: calc(100vh - 190px); }
+
+  @media (min-width: 900px) {
+    .layout { grid-template-columns: minmax(0, 1fr) 340px; padding-bottom: 90px; align-items: start; }
+    #room[data-view="game"] .chatcol, #room[data-view="chat"] .chatcol, #room[data-view="chat"] .main { display: block; }
+    #room[data-view="chat"] .hubbar { display: flex; }
+    .chatcol { position: sticky; top: 74px; }
+    .chatbox, #room[data-view="chat"] .chatbox { height: calc(100vh - 190px); }
+    .tabbar { display: none; }
+    .hubbar { bottom: 0; }
+  }
+
+  /* 알림/모달 */
+  .toast { position: fixed; left: 50%; bottom: 150px; transform: translateX(-50%); background: #2b2621; color: #fff; padding: 10px 16px; border-radius: 12px; z-index: 90; max-width: 90%; font-size: 14px; box-shadow: var(--shadow); }
+  .banner { position: fixed; top: 0; left: 0; right: 0; z-index: 95; background: var(--warn); color: #fff; text-align: center; padding: 6px; font-size: 14px; font-weight: 700; }
+  .overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, .45); z-index: 80; display: flex; align-items: center; justify-content: center; padding: 16px; }
+  .modal { background: var(--card); border-radius: 18px; padding: 20px; width: 100%; max-width: 420px; max-height: 85vh; overflow-y: auto; box-shadow: var(--shadow); }
+  .modal h3 { margin-bottom: 10px; font-size: 18px; }
+  .modal .actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+  .note-ver { font-weight: 800; }
+  .note-date { color: var(--dim); font-size: 13px; margin-left: 6px; }
+  .note ul { margin: 6px 0 14px; padding-left: 20px; font-size: 14.5px; }
 </style>
 </head>
 <body>
-<div class="wrap">
-  <header><h1>오늘은 어떤 게임을 할까요?</h1></header>
-  <div class="games">
-    <a class="game qp" href="/quizparty.html">
-      <h2>미니게임지옥</h2>
-      <p>꽁꽁, 끝말잇기, 10초 맞추기, 업다운, 기억력, 반응속도 등 미니게임 12종 중 10종이 매 판 랜덤으로 뽑혀 이어지고, 점수를 합산해 순위를 가려요.</p>
-      <span class="meta">2~12명 · 10라운드 · 약 15분</span>
-      <span class="go">지옥 입장하기</span>
-      <div class="bulbs" aria-hidden="true"><i>지옥</i></div>
-    </a>
-    <a class="game sp" href="/spyfall.html">
-      <h2>스파이폴</h2>
-      <p>모두가 아는 장소를 단 한 사람만 몰라요. 질문으로 스파이를 가려내세요.</p>
-      <span class="meta">3~8명 · 8분 · 질문과 채팅으로 하는 심리전</span>
-      <span class="go">작전 참가하기</span>
-      <div class="stamp" aria-hidden="true">극비</div>
-    </a>
+<div class="banner" id="banner" hidden>연결이 끊겼어요. 다시 연결하는 중…</div>
+<div class="toast" id="toast" hidden></div>
+
+<!-- 입장: 닉네임은 자동으로 채워져 있고, 버튼 한 번이면 방이 만들어져요 -->
+<main class="screen" id="entry">
+  <div class="topright">
+    <button class="btn small ghost" id="entryNote">패치노트</button>
+    <button class="btn small ghost" id="entryTheme">🌙</button>
   </div>
+  <div class="entrycard">
+    <div class="logo">🎲</div>
+    <h1>게임방</h1>
+    <p class="sub">친구들이랑 바로 한 판</p>
+    <label for="nick">닉네임<button class="linkbtn" id="btnDice" type="button">🎲 다시 뽑기</button></label>
+    <input type="text" id="nick" maxlength="12" autocomplete="off" placeholder="닉네임">
+    <button class="btn primary big" id="btnCreate">방 만들기</button>
+    <div class="or"><span>또는</span></div>
+    <label for="roomInput">방 코드</label>
+    <div class="row">
+      <input type="text" id="roomInput" maxlength="4" autocomplete="off" autocapitalize="characters" placeholder="예: KA6M">
+      <button class="btn" id="btnJoin">입장</button>
+    </div>
+    <div class="err" id="entryErr"></div>
+  </div>
+</main>
+
+<!-- 방 -->
+<div class="screen" id="room" data-view="game" hidden>
+  <div class="sticky">
+    <header class="topbar">
+      <div class="roomtag">방 코드 <b id="roomCode">----</b></div>
+      <button class="btn small" id="btnShare">초대 링크 복사</button>
+      <span class="grow"></span>
+      <button class="btn small ghost" id="btnNote">패치노트</button>
+      <button class="btn small ghost" id="btnTheme">🌙</button>
+      <button class="btn small ghost" id="btnLeave">나가기</button>
+    </header>
+    <div id="pluginBar"></div>
+  </div>
+  <div class="layout" id="layout">
+    <section class="main" id="mainCol">
+      <div class="players" id="players"></div>
+      <div id="lobby" hidden></div>
+      <div id="gameHost" hidden></div>
+    </section>
+    <aside class="chatcol" id="chatCol">
+      <div class="chatbox">
+        <div class="chatlog" id="chatlog"></div>
+        <form class="chatform" id="chatForm" autocomplete="off">
+          <input type="text" id="chatInput" maxlength="200" placeholder="메시지 입력" autocomplete="off">
+          <button class="btn primary" type="submit">전송</button>
+        </form>
+      </div>
+    </aside>
+  </div>
+  <div class="hubbar" id="hubBar"></div>
+  <nav class="tabbar" id="tabbar">
+    <button data-tab="game" class="on">🎮 게임</button>
+    <button data-tab="chat">💬 채팅<i id="unread" hidden>0</i></button>
+  </nav>
 </div>
+
+<div class="overlay" id="overlay" hidden><div class="modal" id="modal"></div></div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="/games/spyfall.js"></script>
+<script src="/games/village.js"></script>
+<script>
+(() => {
+  'use strict';
+  const $ = (s) => document.querySelector(s);
+  const $$ = (s) => document.querySelectorAll(s);
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const ls = {
+    get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* 저장 불가 환경은 무시 */ } },
+    del(k) { try { localStorage.removeItem(k); } catch (e) { /* noop */ } },
+  };
+  const K = { token: 'gr_token', room: 'gr_room', name: 'gr_name', theme: 'gr_theme' };
+
+  /* 패치노트: 위에 새 항목을 추가하면 돼요 */
+  const PATCHNOTES = [
+    { v: '2.0', date: '26-11-10', lines: [
+      '게임방으로 개편했어요. 닉네임은 자동으로 채워지고, 버튼 한 번으로 방을 만들 수 있어요.',
+      '대기실에서 게임 카드를 눌러 바로 게임을 바꿀 수 있어요. 점수와 👑는 방에서 계속 이어져요.',
+      '휴대폰에서는 아래 탭(게임/채팅)으로 쓰고, PC에서는 채팅이 오른쪽에 같이 보여요.',
+      '스파이폴이 ‘우리가 있는 곳은?’으로 이름이 바뀌었어요. 규칙은 그대로예요.',
+      '새 게임 ‘오늘도 이 마을엔 피가 흐른다’가 추가됐어요. 숨은 직업으로 악마를 찾는 5~10명 추리 게임이에요.',
+      '앞으로 게임을 계속 추가할 수 있게 구조를 바꿨어요.',
+    ] },
+  ];
+
+  /* 자동 닉네임 */
+  const ADJ = ['용감한', '졸린', '배고픈', '수상한', '느긋한', '반짝이는', '엉뚱한', '씩씩한', '심심한', '든든한', '눈치빠른', '수줍은'];
+  const ANI = ['호랑이', '고양이', '수달', '펭귄', '너구리', '다람쥐', '부엉이', '고래', '여우', '판다', '오리', '토끼'];
+  const pickOf = (a) => a[Math.floor(Math.random() * a.length)];
+  const randomNick = () => (pickOf(ADJ) + pickOf(ANI)).slice(0, 12);
+
+  const socket = io();
+  const call = (ev, data) => new Promise((res) => socket.emit(ev, data || {}, res));
+
+  let S = null;              // 서버가 보내 주는 방 상태
+  let offset = 0;            // 서버 시각과의 차이
+  let leaderIds = new Set();
+  let view = 'game';         // 모바일 탭: 'game' | 'chat'
+  let unread = 0;
+  let mounted = null;        // 지금 화면에 올라간 게임 { id, no }
+  let entering = false;
+  let booting = false;       // 저장된 방으로 자동 재접속을 시도하는 중
+
+  /* ───────── 공통 도우미 ───────── */
+  let toastTimer = null;
+  function toast(msg) {
+    const t = $('#toast');
+    t.textContent = msg;
+    t.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { t.hidden = true; }, 2600);
+  }
+  function openModal(html) { $('#modal').innerHTML = html; $('#overlay').hidden = false; }
+  function closeModal() { $('#overlay').hidden = true; $('#modal').innerHTML = ''; }
+  $('#overlay').onclick = (e) => { if (e && e.target && e.target.id === 'overlay') closeModal(); };
+
+  function applyTheme(t) {
+    document.documentElement.dataset.theme = t;
+    const icon = t === 'dark' ? '☀️' : '🌙';
+    $('#btnTheme').textContent = icon;
+    $('#entryTheme').textContent = icon;
+    ls.set(K.theme, t);
+  }
+  function toggleTheme() { applyTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'); }
+  function showNotes() {
+    openModal(`<h3>패치노트</h3><div class="note">${PATCHNOTES.map((n) => `<div><span class="note-ver">${esc(n.v)}</span><span class="note-date">${esc(n.date)}</span><ul>${n.lines.map((l) => `<li>${esc(l)}</li>`).join('')}</ul></div>`).join('')}</div><div class="actions"><button class="btn primary" id="mClose">닫기</button></div>`);
+    $('#mClose').onclick = closeModal;
+  }
+
+  const pById = (id) => (S ? S.players.find((p) => p.id === id) : null);
+  const crown = (id) => (leaderIds.has(id) ? '👑' : '');
+  const nm = (p) => (p ? `<span class="nmc" style="color:${esc(p.color)};font-weight:800">${esc(p.avatar)} ${esc(p.name)}${crown(p.id)}</span>` : '?');
+
+  /* ───────── 입장 ───────── */
+  const params = new URLSearchParams(location.search);
+  const urlRoom = (params.get('room') || '').toUpperCase().slice(0, 4);
+
+  function showEntry(msg) {
+    $('#entry').hidden = false;
+    $('#room').hidden = true;
+    $('#entryErr').textContent = msg || '';
+    S = null;
+    unmountGame();
+  }
+  function showRoom() {
+    $('#entry').hidden = true;
+    $('#room').hidden = false;
+  }
+  function saveSession(r, name) {
+    ls.set(K.token, r.token);
+    ls.set(K.room, r.room);
+    if (name) ls.set(K.name, name);
+    try { history.replaceState(null, '', `?room=${r.room}`); } catch (e) { /* noop */ }
+  }
+  async function enter(ev, extra) {
+    if (entering) return;
+    const name = $('#nick').value.trim();
+    if (!name) { $('#entryErr').textContent = '닉네임을 입력해 주세요.'; return; }
+    entering = true;
+    $('#entryErr').textContent = '';
+    const r = await call(ev, { name, ...extra });
+    entering = false;
+    if (!r || !r.ok) { $('#entryErr').textContent = (r && r.error) || '연결에 실패했어요. 잠시 후 다시 시도해 주세요.'; return; }
+    saveSession(r, name);
+    $('#chatlog').innerHTML = '';
+    setView('game');
+    showRoom();
+  }
+  $('#btnCreate').onclick = () => enter('create');
+  $('#btnJoin').onclick = () => {
+    const code = $('#roomInput').value.trim().toUpperCase();
+    if (code.length < 4) { $('#entryErr').textContent = '방 코드 4자리를 입력해 주세요.'; return; }
+    enter('join', { room: code });
+  };
+  $('#roomInput').onkeydown = (e) => { if (e.key === 'Enter') $('#btnJoin').onclick(); };
+  $('#nick').onkeydown = (e) => { if (e.key === 'Enter') ($('#roomInput').value.trim() ? $('#btnJoin') : $('#btnCreate')).onclick(); };
+  $('#btnDice').onclick = () => { $('#nick').value = randomNick(); };
+  $('#entryNote').onclick = showNotes;
+  $('#entryTheme').onclick = toggleTheme;
+  $('#btnNote').onclick = showNotes;
+  $('#btnTheme').onclick = toggleTheme;
+
+  async function tryRejoin() {
+    const token = ls.get(K.token), room = ls.get(K.room);
+    if (!token || !room) return false;
+    if (urlRoom && urlRoom !== room) return false;   // 다른 방의 초대 링크로 들어왔으면 새로 입장해요
+    const r = await call('rejoin', { token, room });
+    if (r && r.ok) { saveSession(r); showRoom(); return true; }
+    ls.del(K.token); ls.del(K.room);
+    return false;
+  }
+
+  /* ───────── 상단 ───────── */
+  $('#btnShare').onclick = async () => {
+    if (!S) return;
+    const url = `${location.origin}/?room=${S.code}`;
+    if (navigator.share) {
+      try { await navigator.share({ title: '게임방', text: `게임방에 들어와! 방 코드 ${S.code}`, url }); } catch (e) { /* 공유 취소 */ }
+      return;
+    }
+    try { await navigator.clipboard.writeText(url); toast('초대 링크를 복사했어요!'); } catch (e) { toast(url); }
+  };
+  $('#btnLeave').onclick = () => {
+    if (!confirm('방에서 나갈까요?')) return;
+    socket.emit('leave');
+    ls.del(K.token); ls.del(K.room);
+    try { history.replaceState(null, '', '/'); } catch (e) { /* noop */ }
+    showEntry('');
+  };
+
+  /* ───────── 플레이어 / 대기실 / 하단 버튼 ───────── */
+  function renderPlayers() {
+    $('#players').innerHTML = S.players.map((p) => {
+      let st = '';
+      if (!p.connected) st = '연결 끊김';
+      else if (S.phase === 'lobby' || S.finished) st = p.ready ? '준비 ✓' : '대기';
+      else st = p.inGame ? '참가 중' : (p.ready ? '다음 판 참가' : '관전');
+      const cls = ['pl', p.id === S.you ? 'me' : '', p.ready && (S.phase === 'lobby' || S.finished) ? 'ready' : '', p.connected ? '' : 'off', leaderIds.has(p.id) ? 'lead' : ''].filter(Boolean).join(' ');
+      return `<div class="${cls}" ${p.id === S.you ? 'id="meChip" title="눌러서 닉네임 바꾸기"' : ''}>${nm(p)}<span class="st">${esc(st)}${p.score ? ` · ${p.score}점` : ''}${p.id === S.you ? ' · 나' : ''}</span></div>`;
+    }).join('');
+    const me = $('#meChip');
+    if (me) me.onclick = renameModal;
+  }
+  function renameModal() {
+    const p = pById(S.you);
+    openModal('<h3>닉네임 바꾸기</h3><input type="text" id="renameInput" maxlength="12" autocomplete="off"><div class="err" id="renameErr"></div><div class="actions"><button class="btn" id="mCancel">취소</button><button class="btn primary" id="mSave">저장</button></div>');
+    $('#renameInput').value = p.name;
+    $('#renameInput').focus();
+    $('#mCancel').onclick = closeModal;
+    const save = async () => {
+      const name = $('#renameInput').value.trim();
+      if (!name) return;
+      const r = await call('rename', { name });
+      if (!r || !r.ok) { $('#renameErr').textContent = (r && r.error) || '바꾸지 못했어요.'; return; }
+      ls.set(K.name, name);
+      closeModal();
+    };
+    $('#mSave').onclick = save;
+    $('#renameInput').onkeydown = (e) => { if (e.key === 'Enter') save(); };
+  }
+
+  function renderLobby() {
+    const el = $('#lobby');
+    if (S.phase !== 'lobby') { el.hidden = true; return; }
+    el.hidden = false;
+    const sel = S.games.find((g) => g.id === S.selected);
+    el.innerHTML = `<div class="card"><h2>대기실</h2>
+        <p class="hint">${S.games.length > 1 ? '게임 카드를 눌러 고르세요. 누구든 바로 바꿀 수 있어요.' : '새 게임이 추가되면 여기에 카드가 늘어나요.'}</p>
+        <div class="gamegrid">${S.games.map((g) => `<button class="gcard${g.id === S.selected ? ' on' : ''}" data-game="${esc(g.id)}"><span class="ge">${esc(g.emoji)}</span><b>${esc(g.name)}</b><small>${g.min}~${g.max}명</small><span class="gd">${esc(g.desc)}</span></button>`).join('')}</div></div>
+      <div class="card"><h3>${esc(sel.emoji)} ${esc(sel.name)} 규칙</h3>
+        <ul class="rules">${sel.rules.map((r) => `<li>${esc(r)}</li>`).join('')}</ul>
+        <p class="hint">친구들에게 방 코드 <b>${esc(S.code)}</b> 또는 초대 링크를 보내세요. ${sel.min}~${sel.max}명이 ‘준비’를 누르면 시작할 수 있어요.</p></div>`;
+    $$('[data-game]').forEach((b) => {
+      b.onclick = async () => { const r = await call('select', { game: b.dataset.game }); if (r && !r.ok) toast(r.error); };
+    });
+  }
+
+  function renderHubBar() {
+    const me = pById(S.you);
+    if (!me) return;
+    const sel = S.games.find((g) => g.id === S.selected);
+    const lobbyLike = S.phase === 'lobby' || S.finished;
+    let html = `<button class="btn ${me.ready ? '' : 'primary'}" id="hbReady">${me.ready ? '준비 취소' : (lobbyLike ? '준비' : '다음 판 준비')}</button>`;
+    if (lobbyLike) html += `<button class="btn primary" id="hbStart" ${S.canStart ? '' : 'disabled'}>${S.finished ? '다시 하기' : '게임 시작'}</button>`;
+    if (S.phase === 'game') html += '<button class="btn" id="hbSwitch">🔄 게임 바꾸기</button>';
+    let note;
+    if (lobbyLike) note = `${esc(sel.name)} · 준비 ${S.readyCount}명 (${sel.min}~${sel.max}명 필요)${me.ready ? '' : ' — 준비를 눌러 주세요'}`;
+    else note = S.spectator ? '관전 중이에요. 준비를 눌러 두면 다음 판에 참가해요.' : `${esc(sel.name)} 진행 중`;
+    html += `<div class="hbnote" id="hbNote">${note}</div>`;
+    $('#hubBar').innerHTML = html;
+    $('#hbReady').onclick = () => socket.emit('ready');
+    const st = $('#hbStart');
+    if (st) st.onclick = async () => { const r = await call('start'); if (r && !r.ok) toast(r.error); };
+    const sw = $('#hbSwitch');
+    if (sw) sw.onclick = async () => {
+      if (!S.finished && !confirm('진행 중인 게임을 멈추고 대기실로 돌아갈까요?')) return;
+      const r = await call('lobby');
+      if (r && !r.ok) toast(r.error);
+    };
+  }
+
+  /* ───────── 게임 화면(플러그인) ───────── */
+  const gameCtx = {
+    host: () => $('#gameHost'),
+    bar: () => $('#pluginBar'),
+    act: (type, data) => call('act', { type, ...(data || {}) }),
+    toast, esc, nm, pById, crown,
+    openChat: () => setView('chat'),
+    view: () => view,
+    now: () => Date.now() + offset,
+  };
+  function unmountGame() {
+    if (mounted) {
+      const P = window.GAME_UI && window.GAME_UI[mounted.id];
+      if (P && P.unmount) P.unmount();
+      mounted = null;
+    }
+    $('#gameHost').innerHTML = '';
+    $('#pluginBar').innerHTML = '';
+  }
+  function renderGame() {
+    const host = $('#gameHost');
+    if (S.phase !== 'game') { unmountGame(); host.hidden = true; return; }
+    host.hidden = false;
+    const P = window.GAME_UI && window.GAME_UI[S.selected];
+    if (!P) { host.innerHTML = '<div class="card">이 게임 화면을 불러오지 못했어요. 새로고침해 주세요.</div>'; return; }
+    if (!mounted || mounted.id !== S.selected || mounted.no !== S.gameNo) {
+      unmountGame();
+      P.mount(gameCtx);
+      mounted = { id: S.selected, no: S.gameNo };
+    }
+    P.update(S, S.game);
+  }
+
+  /* ───────── 채팅 / 탭 ───────── */
+  const chatlog = $('#chatlog');
+  function chatLine(m) {
+    const d = document.createElement('div');
+    if (m.sys) { d.className = 'msg sys'; d.textContent = m.text; return d; }
+    d.className = 'msg';
+    const who = document.createElement('span');
+    who.className = 'who';
+    who.style.color = m.color;
+    who.textContent = `${m.avatar} ${m.name}${crown(m.pid)}`;
+    if (m.spectator) { const t = document.createElement('span'); t.className = 'tag'; t.textContent = '관전'; d.append(t); }
+    d.append(who, m.text);
+    return d;
+  }
+  function addChat(m) {
+    const atBottom = chatlog.scrollHeight - chatlog.scrollTop - chatlog.clientHeight < 60;
+    chatlog.appendChild(chatLine(m));
+    while (chatlog.children && chatlog.children.length > 150) chatlog.removeChild(chatlog.firstChild);
+    if (atBottom || (S && m.pid === S.you)) chatlog.scrollTop = chatlog.scrollHeight;
+    if (view !== 'chat' && !m.sys && S && m.pid !== S.you) { unread += 1; renderUnread(); }
+  }
+  function renderUnread() {
+    const u = $('#unread');
+    u.textContent = String(unread);
+    u.hidden = unread === 0;
+  }
+  function setView(v) {
+    view = v;
+    $('#room').dataset.view = v;
+    $$('[data-tab]').forEach((b) => b.classList.toggle('on', b.dataset.tab === v));
+    if (v === 'chat') { unread = 0; renderUnread(); chatlog.scrollTop = chatlog.scrollHeight; }
+    if (S && S.phase === 'game') renderGame();   // 투표 바 등은 탭에 따라 모양이 달라져요
+  }
+  $$('[data-tab]').forEach((b) => { b.onclick = () => setView(b.dataset.tab); });
+  $('#chatForm').onsubmit = (e) => {
+    e.preventDefault();
+    const i = $('#chatInput');
+    const text = i.value.trim();
+    if (!text) return;
+    socket.emit('chat', { text });
+    i.value = '';
+  };
+
+  /* ───────── 서버 이벤트 ───────── */
+  socket.on('state', (s) => {
+    S = s;
+    offset = s.now - Date.now();
+    const top = Math.max(0, ...s.players.map((p) => p.score));
+    leaderIds = new Set(top >= 1 ? s.players.filter((p) => p.score === top).map((p) => p.id) : []);
+    showRoom();
+    $('#roomCode').textContent = s.code;
+    renderPlayers();
+    renderLobby();
+    renderGame();
+    renderHubBar();
+  });
+  socket.on('chatlog', (list) => { chatlog.innerHTML = ''; list.forEach(addChat); chatlog.scrollTop = chatlog.scrollHeight; unread = 0; renderUnread(); });
+  socket.on('chat', addChat);
+  socket.on('kicked', () => {
+    ls.del(K.token); ls.del(K.room);
+    showEntry('다른 기기에서 접속해서 이 화면은 연결이 끊겼어요.');
+  });
+  socket.on('disconnect', () => { $('#banner').textContent = '연결이 끊겼어요. 다시 연결하는 중…'; $('#banner').hidden = false; });
+  socket.on('connect', async () => {
+    $('#banner').hidden = true;
+    const ok = await tryRejoin();
+    if (!ok) showEntry(S || booting ? '방을 찾을 수 없어요. (서버가 다시 시작되었거나 방이 닫혔어요)' : '');
+    booting = false;
+  });
+
+  /* ───────── 시작 ───────── */
+  applyTheme(ls.get(K.theme) || ((typeof matchMedia === 'function' && matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light'));
+  $('#nick').value = ls.get(K.name) || randomNick();
+  if (urlRoom) $('#roomInput').value = urlRoom;
+  if (ls.get(K.token) && ls.get(K.room) && (!urlRoom || urlRoom === ls.get(K.room))) {
+    // 저장된 방이 있으면 입장 카드를 깜빡이지 않고 바로 이어서 들어가요
+    booting = true;
+    $('#entry').hidden = true;
+    $('#banner').textContent = '서버에 연결하는 중… (처음엔 30초쯤 걸릴 수 있어요)';
+    $('#banner').hidden = false;
+  }
+})();
+</script>
 </body>
 </html>
