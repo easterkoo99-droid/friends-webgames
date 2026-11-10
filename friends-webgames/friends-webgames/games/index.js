@@ -9,4 +9,5 @@
 module.exports = [
   require('./spyfall'),
   require('./village'),
+  require('./letter'),
 ];
