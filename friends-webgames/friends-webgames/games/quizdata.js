@@ -1,0 +1,132 @@
+'use strict';
+/**
+ * 퀴즈 파티 - 문제 은행 (여기만 고치면 문제를 추가/수정할 수 있어요)
+ *
+ * 공통
+ *  - id: 문제마다 겹치지 않는 이름 (예: 'a15'). 한 판에서 같은 문제가 반복되지 않게 구분하는 용도예요.
+ *  - answer: 정답. aliases: 같이 인정할 다른 표기 (띄어쓰기/대소문자/특수문자는 자동으로 무시돼요)
+ *
+ * ggong(꽁꽁 · 주관식 골든벨): q = 문제 문장, answer = 정답, aliases = 같이 인정할 표기
+ * assoc(연상퀴즈): clues = 힌트 5개. 앞쪽이 어렵고 뒤로 갈수록 쉬워야 해요.
+ * person(인물 맞추기): clues = 힌트 4개. 앞쪽이 어렵고 뒤로 갈수록 쉬워야 해요.
+ * ox: statement = 문장, answer = 'O' 또는 'X', explain = 해설
+ * choseong(초성): answer = 한글 정답(초성은 자동 생성), category = 분야 힌트
+ */
+module.exports = {
+  ggong: [
+    { id: 'g1', q: '대한민국의 수도는 어디일까요?', answer: '서울', aliases: ['서울특별시'] },
+    { id: 'g2', q: '물이 얼어서 딱딱해진 것을 무엇이라고 할까요?', answer: '얼음', aliases: [] },
+    { id: 'g3', q: '1년은 몇 개월일까요? (숫자만 입력)', answer: '12', aliases: ['12개월', '열두', '열두달', '열두개월', '12달'] },
+    { id: 'g4', q: '훈민정음을 만든 조선의 임금은 누구일까요?', answer: '세종대왕', aliases: ['세종', '이도'] },
+    { id: 'g5', q: '태양계에서 가장 큰 행성은 무엇일까요?', answer: '목성', aliases: ['jupiter'] },
+    { id: 'g6', q: '빛의 삼원색은 빨강, 초록, 그리고 무엇일까요?', answer: '파랑', aliases: ['파란색', 'blue'] },
+    { id: 'g7', q: '‘남대문’이라고도 불리는 우리나라 국보 1호의 정식 이름은?', answer: '숭례문', aliases: [] },
+    { id: 'g8', q: '물의 화학식을 알파벳과 숫자로 쓰면?', answer: 'H2O', aliases: ['에이치투오'] },
+    { id: 'g9', q: '지구에서 가장 넓은 바다(대양)는 무엇일까요?', answer: '태평양', aliases: [] },
+    { id: 'g10', q: '피카소가 스페인 내전 중 폭격 사건을 그린 대표작의 제목은?', answer: '게르니카', aliases: ['guernica'] },
+    { id: 'g11', q: '세계에서 면적이 가장 작은 나라는 어디일까요?', answer: '바티칸', aliases: ['바티칸시국', 'vatican'] },
+    { id: 'g12', q: '셰익스피어의 4대 비극 중, 덴마크 왕자가 주인공인 작품은?', answer: '햄릿', aliases: ['hamlet'] },
+    { id: 'g13', q: '훈민정음이 반포된 서기 연도는? (숫자 4자리)', answer: '1446', aliases: ['1446년'] },
+    { id: 'g14', q: '대한민국(남한)에서 가장 높은 산은 무엇일까요?', answer: '한라산', aliases: [] },
+    { id: 'g15', q: '대한민국의 국화(나라꽃)는 무엇일까요?', answer: '무궁화', aliases: [] },
+    { id: 'g16', q: '면적이 가장 큰 대륙은 어디일까요?', answer: '아시아', aliases: ['asia'] },
+    { id: 'g17', q: '컴퓨터에서 Ctrl+C는 복사, Ctrl+V는 무엇일까요?', answer: '붙여넣기', aliases: ['붙이기', 'paste'] },
+    { id: 'g18', q: '사람의 몸에서 가장 큰 장기는 무엇일까요?', answer: '피부', aliases: ['skin'] },
+    { id: 'g19', q: '인류 최초로 달에 발을 디딘 사람은 누구일까요?', answer: '닐 암스트롱', aliases: ['암스트롱', 'armstrong', 'neilarmstrong'] },
+    { id: 'g20', q: '광복절은 몇 월 며칠일까요?', answer: '8월 15일', aliases: ['815', '8.15', '8/15'] },
+  ],
+
+  assoc: [
+    { id: 'a1', answer: '사과', aliases: ['애플', 'apple'], clues: ['빨간색', '백설공주', '뉴턴', '아이폰 로고', '깎아서 먹는 과일'] },
+    { id: 'a2', answer: '우산', aliases: [], clues: ['비', '장마', '접이식', '살', '손잡이가 있는 비 가림 도구'] },
+    { id: 'a3', answer: '달', aliases: ['달님', 'moon'], clues: ['밤하늘', '토끼', '보름', '아폴로 11호', '지구의 위성'] },
+    { id: 'a4', answer: '김치', aliases: [], clues: ['한국', '발효', '배추', '고춧가루', '대표적인 반찬'] },
+    { id: 'a5', answer: '축구', aliases: ['풋볼', 'football', 'soccer'], clues: ['월드컵', '골키퍼', '오프사이드', '11명', '손을 쓰면 안 되는 구기 종목'] },
+    { id: 'a6', answer: '지하철', aliases: [], clues: ['환승', '노선도', '스크린도어', '교통카드', '땅속을 달리는 열차'] },
+    { id: 'a7', answer: '거북이', aliases: ['거북', '거북이'], clues: ['토끼와 경주', '느림보', '등껍질', '용궁', '오래 사는 동물'] },
+    { id: 'a8', answer: '겨울', aliases: [], clues: ['눈사람', '붕어빵', '크리스마스', '롱패딩', '12월부터 2월까지'] },
+    { id: 'a9', answer: '라면', aliases: ['라면', '컵라면'], clues: ['끓는 물', '스프', '꼬불꼬불한 면', '냄비 뚜껑 받침', '3분이면 완성'] },
+    { id: 'a10', answer: '소방차', aliases: [], clues: ['사이렌', '빨간색', '호스', '출동', '불을 끄는 차'] },
+    { id: 'a11', answer: '시계', aliases: [], clues: ['째깍째깍', '바늘', '알람', '12시', '손목에 차는 것'] },
+    { id: 'a12', answer: '비행기', aliases: ['항공기'], clues: ['활주로', '기장', '이륙', '라이트 형제', '하늘을 나는 교통수단'] },
+    { id: 'a13', answer: '커피', aliases: ['coffee'], clues: ['아메리카노', '원두', '카페인', '바리스타', '졸음을 쫓는 음료'] },
+    { id: 'a14', answer: '눈사람', aliases: [], clues: ['겨울', '당근 코', '숯 눈', '올라프', '햇볕에 녹아내리는 것'] },
+  ],
+
+  person: [
+    { id: 'p1', answer: '세종대왕', aliases: ['세종', '이도'], clues: ['조선의 4대 왕', '집현전 학자들과 학문을 장려했다', '측우기와 해시계 제작을 지원했다', '훈민정음을 창제했다'] },
+    { id: 'p2', answer: '이순신', aliases: ['이순신장군', '충무공'], clues: ['조선 중기의 무신', '임진왜란 때 수군을 이끌었다', '한산도 대첩을 승리로 이끌었다', '거북선과 함께 떠오르는 장군'] },
+    { id: 'p3', answer: '아인슈타인', aliases: ['알베르트아인슈타인', 'einstein'], clues: ['독일 태생의 이론물리학자', '1921년 노벨 물리학상을 받았다', '광전 효과를 설명했다', '상대성 이론을 발표했다'] },
+    { id: 'p4', answer: '스티브 잡스', aliases: ['잡스', 'steve jobs', 'stevejobs'], clues: ['미국의 기업가', '픽사의 주인이었던 적이 있다', '자신이 세운 회사에서 쫓겨났다가 돌아왔다', '애플 공동 창업자로 아이폰을 공개했다'] },
+    { id: 'p5', answer: '마리 퀴리', aliases: ['퀴리부인', '퀴리', '마리퀴리'], clues: ['폴란드 출신의 과학자', '프랑스에서 연구했다', '방사능 연구로 유명하다', '물리학상과 화학상 노벨상을 모두 받았다'] },
+    { id: 'p6', answer: '레오나르도 다 빈치', aliases: ['다빈치', '레오나르도다빈치', '레오나르도'], clues: ['이탈리아 르네상스 시대의 인물', '화가이자 과학자이며 발명가였다', '최후의 만찬을 그렸다', '모나리자를 그렸다'] },
+    { id: 'p7', answer: '나폴레옹', aliases: ['나폴레옹보나파르트', '나폴레옹 보나파르트'], clues: ['코르시카 섬 출신', '프랑스의 군인이자 황제', '워털루 전투에서 패했다', '엘바 섬과 세인트헬레나 섬에 유배되었다'] },
+    { id: 'p8', answer: '유관순', aliases: ['유관순열사'], clues: ['일제강점기의 독립운동가', '이화학당 학생이었다', '아우내 장터 만세 운동을 이끌었다', '3·1 운동을 상징하는 인물'] },
+    { id: 'p9', answer: '안중근', aliases: ['안중근의사'], clues: ['대한제국 시기의 독립운동가', '동양평화론을 구상했다', '하얼빈에서 의거를 일으켰다', '이토 히로부미를 저격했다'] },
+    { id: 'p10', answer: '간디', aliases: ['마하트마간디', '마하트마', 'gandhi'], clues: ['인도의 독립운동 지도자', '비폭력 저항을 강조했다', '소금 행진을 이끌었다', '마하트마라고 불렸다'] },
+    { id: 'p11', answer: '베토벤', aliases: ['루트비히판베토벤', 'beethoven'], clues: ['독일 출신의 작곡가', '귀가 들리지 않게 된 것으로 유명하다', '운명 교향곡을 작곡했다', '합창이 들어간 교향곡 9번을 작곡했다'] },
+  ],
+
+  ox: [
+    { id: 'o1', statement: '문어의 심장은 3개다.', answer: 'O', explain: '아가미 쪽 심장 2개와 온몸으로 피를 보내는 심장 1개, 모두 3개예요.' },
+    { id: 'o2', statement: '번개는 같은 곳에 두 번 칠 수 없다.', answer: 'X', explain: '높은 건물처럼 번개가 잘 치는 곳에는 여러 번 칠 수 있어요.' },
+    { id: 'o3', statement: '바나나는 나무에서 열린다.', answer: 'X', explain: '바나나는 나무처럼 보이지만 풀(초본식물)로 분류돼요.' },
+    { id: 'o4', statement: '토마토는 식물학적으로 열매(과일)다.', answer: 'O', explain: '식물학에서는 씨앗을 품은 열매로 분류해요.' },
+    { id: 'o5', statement: '갓 태어난 아기는 성인보다 뼈의 개수가 적다.', answer: 'X', explain: '아기는 약 300개, 성인은 206개예요. 자라면서 뼈가 서로 붙어요.' },
+    { id: 'o6', statement: '태양계에서 가장 뜨거운 행성은 금성이다.', answer: 'O', explain: '짙은 이산화탄소 대기 때문에 태양에 더 가까운 수성보다 표면이 더 뜨거워요.' },
+    { id: 'o7', statement: '고래는 어류다.', answer: 'X', explain: '고래는 새끼에게 젖을 먹이는 포유류예요.' },
+    { id: 'o8', statement: '소리는 진공에서도 전달된다.', answer: 'X', explain: '소리는 공기나 물 같은 매질이 있어야 전달돼요.' },
+    { id: 'o9', statement: '현대 한글의 기본 자음은 14개, 기본 모음은 10개다.', answer: 'O', explain: '자음 14자와 모음 10자, 모두 24자예요.' },
+    { id: 'o10', statement: '달은 해마다 지구에서 조금씩 멀어지고 있다.', answer: 'O', explain: '1년에 약 3.8cm씩 멀어지고 있어요.' },
+    { id: 'o11', statement: '꿀벌은 사람을 쏘고 나면 보통 죽는다.', answer: 'O', explain: '침에 갈고리가 있어 피부에 박히면 침과 함께 몸 일부가 떨어져 나가요.' },
+    { id: 'o12', statement: '혀에는 단맛·쓴맛 등 맛마다 느끼는 부위가 따로 정해져 있다.', answer: 'X', explain: '‘혀 지도’는 잘못 알려진 이야기이고, 혀 전체에서 여러 맛을 느껴요.' },
+    { id: 'o13', statement: '에베레스트산은 해발고도가 가장 높은 산이다.', answer: 'O', explain: '해발 약 8,849m로 바다 표면 기준 가장 높아요.' },
+    { id: 'o14', statement: '물은 어디서나 100℃에서 끓는다.', answer: 'X', explain: '기압에 따라 끓는점이 달라져요. 높은 산에서는 더 낮은 온도에서 끓어요.' },
+    { id: 'o15', statement: '펭귄은 북극에 산다.', answer: 'X', explain: '펭귄은 주로 남극과 남반구에 살아요.' },
+    { id: 'o16', statement: '다이아몬드는 탄소로 이루어져 있다.', answer: 'O', explain: '연필심의 흑연과 같은 탄소로, 원자 배열만 달라요.' },
+    { id: 'o17', statement: '올림픽 오륜기에 있는 고리는 6개다.', answer: 'X', explain: '다섯 개의 고리예요.' },
+    { id: 'o18', statement: '상어는 딱딱한 뼈 대신 연골로 된 골격을 가진다.', answer: 'O', explain: '상어는 연골어류예요.' },
+    { id: 'o19', statement: '초콜릿은 개에게 해롭다.', answer: 'O', explain: '테오브로민 성분이 개에게는 독이 될 수 있어요.' },
+    { id: 'o20', statement: '사람은 뇌의 10%만 사용한다.', answer: 'X', explain: '뇌는 대부분 영역이 쓰이는 잘못 알려진 이야기예요.' },
+    { id: 'o21', statement: '나비는 발로도 맛을 느낀다.', answer: 'O', explain: '나비의 발에는 맛을 느끼는 감각기관이 있어요.' },
+    { id: 'o22', statement: '코끼리는 뛰어오를 수 없다.', answer: 'O', explain: '코끼리는 네 발이 모두 땅에서 떨어지는 점프를 하지 못해요.' },
+    { id: 'o23', statement: '무지개의 색은 실제로 정확히 일곱 개로 나뉘어 있다.', answer: 'X', explain: '빛은 연속적으로 변하고, 일곱 색은 사람이 정해 부르는 관습이에요.' },
+    { id: 'o24', statement: '우리나라 5만원권 지폐에 그려진 인물은 신사임당이다.', answer: 'O', explain: '5만원권은 신사임당, 1만원권은 세종대왕이에요.' },
+    { id: 'o25', statement: '우리나라 1만원권 지폐에 그려진 인물은 이순신이다.', answer: 'X', explain: '1만원권은 세종대왕이에요. 이순신은 100원 동전에 있어요.' },
+  ],
+
+  choseong: [
+    { id: 'c1', answer: '김치찌개', aliases: ['김치찌게'], category: '음식' },
+    { id: 'c2', answer: '떡볶이', aliases: ['떡볶기'], category: '음식' },
+    { id: 'c3', answer: '삼겹살', aliases: [], category: '음식' },
+    { id: 'c4', answer: '비빔밥', aliases: [], category: '음식' },
+    { id: 'c5', answer: '짜장면', aliases: ['자장면'], category: '음식' },
+    { id: 'c6', answer: '잔치국수', aliases: [], category: '음식' },
+    { id: 'c7', answer: '닭갈비', aliases: [], category: '음식' },
+    { id: 'c8', answer: '붕어빵', aliases: [], category: '간식' },
+    { id: 'c9', answer: '된장찌개', aliases: ['된장찌게'], category: '음식' },
+    { id: 'c10', answer: '코끼리', aliases: [], category: '동물' },
+    { id: 'c11', answer: '하이에나', aliases: [], category: '동물' },
+    { id: 'c12', answer: '고슴도치', aliases: [], category: '동물' },
+    { id: 'c13', answer: '오랑우탄', aliases: [], category: '동물' },
+    { id: 'c14', answer: '카멜레온', aliases: [], category: '동물' },
+    { id: 'c15', answer: '경복궁', aliases: [], category: '장소' },
+    { id: 'c16', answer: '남산타워', aliases: ['엔서울타워', 'n서울타워'], category: '장소' },
+    { id: 'c17', answer: '제주도', aliases: [], category: '장소' },
+    { id: 'c18', answer: '해운대', aliases: ['해운대해수욕장'], category: '장소' },
+    { id: 'c19', answer: '롯데월드', aliases: [], category: '장소' },
+    { id: 'c20', answer: '한라산', aliases: [], category: '장소' },
+    { id: 'c21', answer: '청소기', aliases: [], category: '가전제품' },
+    { id: 'c22', answer: '냉장고', aliases: [], category: '가전제품' },
+    { id: 'c23', answer: '세탁기', aliases: [], category: '가전제품' },
+    { id: 'c24', answer: '전자레인지', aliases: ['전자렌지'], category: '가전제품' },
+    { id: 'c25', answer: '선풍기', aliases: [], category: '가전제품' },
+    { id: 'c26', answer: '에어컨', aliases: [], category: '가전제품' },
+    { id: 'c27', answer: '기생충', aliases: [], category: '영화' },
+    { id: 'c28', answer: '겨울왕국', aliases: [], category: '영화' },
+    { id: 'c29', answer: '오징어 게임', aliases: [], category: '드라마' },
+    { id: 'c30', answer: '해리포터', aliases: [], category: '영화' },
+    { id: 'c31', answer: '배드민턴', aliases: [], category: '스포츠' },
+    { id: 'c32', answer: '마라톤', aliases: [], category: '스포츠' },
+  ],
+};

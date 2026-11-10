@@ -2,7 +2,7 @@
   "name": "friends-webgames",
   "version": "1.0.0",
   "private": true,
-  "description": "친구들과 즐기는 멀티플레이어 웹게임 - 블라인드 마켓 & 스파이폴",
+  "description": "친구들과 즐기는 멀티플레이어 웹게임 - 스파이폴",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
