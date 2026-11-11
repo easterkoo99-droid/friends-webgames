@@ -34,8 +34,10 @@
     --bg-art: linear-gradient(180deg, rgba(2, 132, 199, .06), transparent 260px);
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--ink); font-family: var(--font); font-size: 15.5px; line-height: 1.5; }
-  body { background: var(--bg-art), var(--bg); background-attachment: fixed; }
+  html { background: var(--bg); overscroll-behavior-y: none; }
+  html, body { margin: 0; min-height: 100%; color: var(--ink); font-family: var(--font); font-size: 15.5px; line-height: 1.5; }
+  body { background: transparent; }
+  body::before { content: ''; position: fixed; inset: 0; z-index: -1; background: var(--bg-art); pointer-events: none; }
   button, input { font-family: inherit; font-size: inherit; color: inherit; }
   [hidden] { display: none !important; }
   h1, h2, h3 { margin: 0; line-height: 1.3; }
@@ -103,8 +105,8 @@
   .menu button.danger { color: var(--bad); }
   #pluginBar:empty { display: none; }
   #pluginBar > div { padding-left: max(12px, calc((100vw - 1100px) / 2 + 12px)); padding-right: max(12px, calc((100vw - 1100px) / 2 + 12px)); }
-  .layout { display: grid; grid-template-columns: 1fr; gap: 12px; max-width: 1100px; margin: 0 auto; padding: 12px 12px 150px; }
-  #room[data-view="chat"] .layout { padding-bottom: 84px; }
+  .layout { display: grid; grid-template-columns: 1fr; gap: 12px; max-width: 1100px; margin: 0 auto; padding: 12px 12px calc(var(--dock, 130px) + 16px); }
+  #room[data-view="chat"] .layout { padding-bottom: calc(var(--dock, 56px) + 12px); }
   .main { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
   .main > .eyebrow { margin: 0 0 -6px; }
   #lobby > * + * { margin-top: 12px; }
@@ -152,38 +154,66 @@
   .rules { margin: 10px 0 0; padding-left: 18px; font-size: 14px; }
   .rules li { margin: 5px 0; }
 
-  .hubbar { position: fixed; left: 0; right: 0; bottom: calc(56px + env(safe-area-inset-bottom)); z-index: 35; display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; align-items: center; padding: 9px 12px; background: color-mix(in srgb, var(--bg) 94%, transparent); border-top: 1px solid var(--line2); backdrop-filter: blur(10px); }
+  /* 하단: 준비/시작 버튼 바 + 탭 바를 하나로 묶어 고정해요 (따로 띄우면 사이에 틈이 생겼어요) */
+  .dock { position: fixed; left: 0; right: 0; bottom: 0; z-index: 36; background: var(--bg); border-top: 1px solid var(--line2); padding-bottom: env(safe-area-inset-bottom); }
+  .hubbar { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; align-items: center; padding: 9px 12px; max-width: 1100px; margin: 0 auto; }
   .hubbar .btn { flex: 1 1 0; max-width: 220px; }
   .hubbar.slim { padding: 6px 12px; gap: 6px; }
   .hubbar.slim .btn { padding: 7px 10px; font-size: 13.5px; }
   .hbnote { width: 100%; text-align: center; font-size: 12px; color: var(--dim); }
-  .tabbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 36; display: grid; grid-template-columns: 1fr 1fr; background: var(--bg); border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom); }
+  .tabbar { display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid var(--line); }
   .tabbar button { border: 0; background: transparent; padding: 13px 0; font-weight: 700; color: var(--dim); position: relative; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 7px; font-size: 14px; }
   .tabbar button + button { border-left: 1px solid var(--line); }
   .tabbar button svg { width: 18px; height: 18px; }
   .tabbar button.on { color: var(--accent); box-shadow: inset 0 2px 0 var(--accent); background: color-mix(in srgb, var(--accent) 7%, transparent); }
   .tabbar i { background: var(--bad); color: #fff; font-style: normal; font-family: var(--mono); font-size: 10.5px; font-weight: 600; padding: 0 6px; border-radius: 3px; }
+  .guidecol { display: none; min-width: 0; }
+  #room[data-view="guide"] .guidecol { display: block; }
+  #room[data-view="guide"] .main, #room[data-view="guide"] .chatcol, #room[data-view="guide"] .hubbar { display: none; }
+  #room[data-view="guide"] .layout { padding-bottom: calc(var(--dock, 56px) + 12px); }
   #room[data-view="game"] .chatcol { display: none; }
   #room[data-view="chat"] .main, #room[data-view="chat"] .hubbar { display: none; }
-  #room[data-view="chat"] .chatbox { height: calc(100vh - var(--top, 64px) - 96px); height: calc(100dvh - var(--top, 64px) - 96px); }
+  #room[data-view="chat"] .chatbox { height: calc(100vh - var(--top, 64px) - var(--dock, 56px) - 24px); height: calc(100dvh - var(--top, 64px) - var(--dock, 56px) - 24px); }
 
   @media (min-width: 900px) {
-    .layout { grid-template-columns: minmax(0, 1fr) 350px; padding-bottom: 96px; align-items: start; }
+    .layout { grid-template-columns: minmax(0, 1fr) 350px; padding-bottom: calc(var(--dock, 80px) + 16px); align-items: start; }
     #room[data-view="game"] .chatcol, #room[data-view="chat"] .chatcol, #room[data-view="chat"] .main { display: block; }
-    #room[data-view="chat"] .hubbar { display: flex; }
+    #room[data-view="chat"] .hubbar, #room[data-view="guide"] .hubbar { display: flex; }
+    #room[data-view="guide"] .chatcol, #room[data-view="guide"] .main { display: block; }
+    .guidecol, #room[data-view="guide"] .guidecol { display: none; }
     .chatcol { position: sticky; top: 74px; }
-    .chatbox, #room[data-view="chat"] .chatbox { height: calc(100vh - var(--top, 64px) - 110px); }
+    .chatbox, #room[data-view="chat"] .chatbox { height: calc(100vh - var(--top, 64px) - var(--dock, 70px) - 28px); }
     .tabbar { display: none; }
-    .hubbar { bottom: 0; }
     .gamegrid { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
   }
 
   /* 알림 / 모달 */
-  .toast { position: fixed; left: 50%; bottom: 128px; transform: translateX(-50%); background: #e7eaf0; color: #0b0d11; padding: 9px 16px; border-radius: var(--r); z-index: 90; max-width: 90%; font-size: 13.5px; font-weight: 700; box-shadow: var(--shadow); }
+  .toast { position: fixed; left: 50%; bottom: calc(var(--dock, 120px) + 14px); transform: translateX(-50%); background: #e7eaf0; color: #0b0d11; padding: 9px 16px; border-radius: var(--r); z-index: 90; max-width: 90%; font-size: 13.5px; font-weight: 700; box-shadow: var(--shadow); }
   .banner { position: fixed; top: 0; left: 0; right: 0; z-index: 95; background: var(--warn); color: #1c1400; text-align: center; padding: 6px; font-size: 13.5px; font-weight: 800; }
   .overlay { position: fixed; inset: 0; background: rgba(3, 4, 8, .7); backdrop-filter: blur(3px); z-index: 80; display: flex; align-items: center; justify-content: center; padding: 16px; }
   .modal { background: var(--card-solid); border: 1px solid var(--line2); border-radius: var(--r-lg); padding: 20px; width: 100%; max-width: 430px; max-height: 85vh; overflow-y: auto; box-shadow: var(--shadow); }
+  .modal.wide { max-width: 640px; }
   .modal h3 { margin-bottom: 12px; font-size: 18px; }
+  /* 게임 설명 시트 */
+  .help { display: flex; flex-direction: column; gap: 12px; }
+  .hp-head { display: flex; gap: 12px; align-items: center; }
+  .hp-head .ge { font-size: 40px; line-height: 1; }
+  .hp-three { display: flex; flex-direction: column; gap: 8px; }
+  .hp-three > div { display: flex; gap: 11px; align-items: flex-start; padding: 11px 12px; border: 1px solid var(--line2); border-radius: var(--r); background: var(--soft); font-size: 16px; line-height: 1.5; }
+  .hp-three .n { flex: 0 0 auto; width: 26px; height: 26px; border-radius: 50%; background: var(--accent); color: var(--accent-ink); font-family: var(--mono); font-weight: 700; display: grid; place-items: center; font-size: 14px; margin-top: 1px; }
+  .hp-three b, .hp-lines b { color: var(--accent); }
+  .hp-lines { margin: 8px 0 0; padding-left: 20px; font-size: 15.5px; line-height: 1.55; }
+  .hp-lines li { margin: 7px 0; }
+  .hp-item { border: 1px solid var(--line); border-left: 4px solid var(--cc, var(--line2)); border-radius: var(--r-lg); background: var(--card); padding: 12px 14px 13px; margin-top: 10px; }
+  .hp-item .t { display: flex; align-items: center; gap: 10px; font-weight: 900; font-size: 18px; }
+  .hp-item .em { font-size: 30px; line-height: 1; }
+  .hp-item .num { font-family: var(--mono); color: var(--cc); font-size: 20px; margin-right: 2px; }
+  .hp-item .sub { color: var(--dim); font-size: 13px; font-weight: 700; margin-left: auto; }
+  .hp-text { font-size: 15.5px; line-height: 1.55; margin-top: 7px; }
+  .hp-ex, .hp-tip { margin-top: 8px; padding: 8px 10px; border-radius: var(--r); font-size: 14.5px; line-height: 1.5; }
+  .hp-ex { background: color-mix(in srgb, var(--cc, var(--accent)) 12%, transparent); }
+  .hp-tip { background: var(--soft); color: var(--dim); }
+  .hp-ex b, .hp-tip b { color: var(--ink); }
   .modal .actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
   .note-ver { font-family: var(--mono); font-size: 14px; color: var(--accent); letter-spacing: .08em; }
   .note-date { font-family: var(--mono); color: var(--dim); font-size: 11.5px; margin-left: 8px; }
@@ -245,6 +275,7 @@
       <button class="iconbtn" id="btnShare" title="초대 링크 보내기" aria-label="초대 링크 보내기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="2.6"/><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="19" r="2.6"/><path d="M8.3 10.8l7.4-4.4M8.3 13.2l7.4 4.4"/></svg></button>
       <button class="iconbtn" id="btnMenu" title="메뉴" aria-label="메뉴"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button>
       <div class="menu" id="menu" hidden>
+        <button id="btnGuide">📖 게임 설명</button>
         <button id="btnNote">📋 패치노트</button>
         <button id="btnTheme">☀️ 밝은 화면으로</button>
         <button id="btnLeave" class="danger">🚪 방에서 나가기</button>
@@ -259,6 +290,7 @@
       <div id="lobby" hidden></div>
       <div id="gameHost" hidden></div>
     </section>
+    <section class="guidecol" id="guideCol"><div id="guide"></div></section>
     <aside class="chatcol" id="chatCol">
       <div class="chatbox">
         <div class="chathead eyebrow"><span>CHAT</span><b>ALL</b></div>
@@ -270,11 +302,14 @@
       </div>
     </aside>
   </div>
+  <div class="dock" id="dock">
   <div class="hubbar" id="hubBar"></div>
   <nav class="tabbar" id="tabbar">
     <button data-tab="game" class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="12" rx="4"/><path d="M8 10v4M6 12h4"/><circle cx="16" cy="11" r=".8" fill="currentColor"/><circle cx="18" cy="13" r=".8" fill="currentColor"/></svg>게임</button>
     <button data-tab="chat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H9l-5 4z"/></svg>채팅<i id="unread" hidden>0</i></button>
+    <button data-tab="guide"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5C4 4.7 4.7 4 5.5 4H11v15H5.5C4.7 19 4 18.3 4 17.5zM20 5.5c0-.8-.7-1.5-1.5-1.5H13v15h5.5c.8 0 1.5-.7 1.5-1.5z"/></svg>설명</button>
   </nav>
+  </div>
 </div>
 
 <div class="overlay" id="overlay" hidden><div class="modal" id="modal"></div></div>
@@ -320,7 +355,7 @@
   const socket = io();
   const call = (ev, data) => new Promise((res) => socket.emit(ev, data || {}, res));
 
-  const PROTO = 4;           // 서버(hub.js)와 같아야 해요
+  const PROTO = 5;           // 서버(hub.js)와 같아야 해요
   let S = null;              // 서버가 보내 주는 방 상태
   let offset = 0;            // 서버 시각과의 차이
   let leaderIds = new Set();
@@ -340,7 +375,7 @@
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => { t.hidden = true; }, 2600);
   }
-  function openModal(html) { $('#modal').innerHTML = html; $('#overlay').hidden = false; }
+  function openModal(html, wide) { $('#modal').innerHTML = html; $('#modal').classList.toggle('wide', !!wide); $('#overlay').hidden = false; }
   function closeModal() { $('#overlay').hidden = true; $('#modal').innerHTML = ''; }
   $('#overlay').onclick = (e) => { if (e && e.target && e.target.id === 'overlay') closeModal(); };
 
@@ -420,6 +455,7 @@
   $('#entryNote').onclick = showNotes;
   $('#entryTheme').onclick = toggleTheme;
   $('#btnNote').onclick = showNotes;
+  $('#btnGuide').onclick = () => { $('#menu').hidden = true; showGuide(); };
   $('#btnTheme').onclick = toggleTheme;
 
   async function tryRejoin() {
@@ -611,10 +647,41 @@
     u.textContent = String(unread);
     u.hidden = unread === 0;
   }
+  // ───── 게임 설명 시트: 지금 고른 게임의 3줄 요약, 진행 방법, 카드/직업 설명 ─────
+  const fmt = (t) => esc(t).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
+  function guideHTML() {
+    const g = S && S.games.find((x) => x.id === S.selected);
+    if (!g) return '';
+    const h = g.help;
+    let html = `<div class="help"><div class="card"><div class="eyebrow"><span>GUIDE</span><b>${g.min}–${g.max} PLAYERS</b></div><div class="hp-head"><span class="ge">${esc(g.emoji)}</span><div><h2>${esc(g.name)}</h2><div class="hint" style="margin:2px 0 0">${esc(g.desc)}</div></div></div></div>`;
+    if (!h) return `${html}<div class="card"><ul class="hp-lines">${g.rules.map((r) => `<li>${fmt(r)}</li>`).join('')}</ul></div></div>`;
+    html += `<div class="card"><div class="eyebrow"><span>3 LINES</span><b>QUICK</b></div><div class="hp-three">${h.summary.map((t, i) => `<div><span class="n">${i + 1}</span><span>${fmt(t)}</span></div>`).join('')}</div></div>`;
+    (h.sections || []).forEach((sec) => { html += `<div class="card"><h3>${esc(sec.title)}</h3><ul class="hp-lines">${sec.lines.map((l) => `<li>${fmt(l)}</li>`).join('')}</ul></div>`; });
+    (h.groups || []).forEach((grp) => {
+      html += `<div class="card"><h3>${esc(grp.title)}</h3>${grp.items.map((it) => `<div class="hp-item" style="--cc:${esc(it.color || '#94a3b8')}"><div class="t"><span class="em">${esc(it.emoji || '')}</span><span>${it.badge ? `<span class="num">${esc(it.badge)}</span>` : ''}${esc(it.title)}</span>${it.sub ? `<span class="sub">${esc(it.sub)}</span>` : ''}</div><div class="hp-text">${fmt(it.text)}</div>${it.example ? `<div class="hp-ex"><b>📌 예시</b> ${fmt(it.example)}</div>` : ''}${it.tip ? `<div class="hp-tip"><b>💡 팁</b> ${fmt(it.tip)}</div>` : ''}</div>`).join('')}</div>`;
+    });
+    return `${html}</div>`;
+  }
+  let guideSig = '';
+  function renderGuide(force) {
+    if (!S) return;
+    const sig = `${S.selected}|${S.games.map((g) => (g.help ? 1 : 0)).join('')}`;
+    if (!force && sig === guideSig) return;
+    guideSig = sig;
+    $('#guide').innerHTML = guideHTML();
+  }
+  const isNarrow = () => !!(window.matchMedia && window.matchMedia('(max-width: 899px)').matches);
+  function showGuide() {
+    if (isNarrow()) { setView('guide'); return; }   // 폰: 설명 탭으로, PC: 팝업으로
+    openModal(`${guideHTML()}<div class="actions"><button class="btn primary" id="guideClose">닫기</button></div>`, true);
+    $('#guideClose').onclick = closeModal;
+  }
+
   function setView(v) {
     view = v;
     $('#room').dataset.view = v;
     $$('[data-tab]').forEach((b) => b.classList.toggle('on', b.dataset.tab === v));
+    if (v === 'guide') { renderGuide(true); if (typeof window.scrollTo === 'function') window.scrollTo(0, 0); }
     if (v === 'chat') { unread = 0; renderUnread(); chatlog.scrollTop = chatlog.scrollHeight; }
     if (S && S.phase === 'game') renderGame();   // 투표 바 등은 탭에 따라 모양이 달라져요
     syncTop();
@@ -631,10 +698,14 @@
 
   /* ───────── 서버 이벤트 ───────── */
   function syncTop() {
-    const st = document.querySelector('#stickyTop');
     const root = document.documentElement;
-    if (st && st.offsetHeight && root.style && typeof root.style.setProperty === 'function') root.style.setProperty('--top', `${st.offsetHeight}px`);
+    if (!root.style || typeof root.style.setProperty !== 'function') return;
+    const st = document.querySelector('#stickyTop');
+    const dk = document.querySelector('#dock');
+    if (st && st.offsetHeight) root.style.setProperty('--top', `${st.offsetHeight}px`);
+    if (dk && dk.offsetHeight) root.style.setProperty('--dock', `${dk.offsetHeight}px`);   // 하단 바 높이에 맞춰 내용이 가려지지 않게
   }
+  if (typeof ResizeObserver === 'function') { const ro = new ResizeObserver(() => syncTop()); ['#stickyTop', '#dock'].forEach((q) => { const e = document.querySelector(q); if (e) ro.observe(e); }); }
   if (typeof window.addEventListener === 'function') window.addEventListener('resize', syncTop);
   socket.on('state', (s) => {
     S = s;
@@ -648,6 +719,7 @@
     renderLobby();
     renderGame();
     renderHubBar();
+    renderGuide(false);
     syncTop();
   });
   socket.on('chatlog', (list) => { chatlog.innerHTML = ''; list.forEach(addChat); chatlog.scrollTop = chatlog.scrollHeight; unread = 0; renderUnread(); });

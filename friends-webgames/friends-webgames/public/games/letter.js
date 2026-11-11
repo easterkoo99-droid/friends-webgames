@@ -31,9 +31,22 @@
   .lt-disc { display: flex; flex-wrap: wrap; gap: 3px; }
   .lt-mini { font-size: 12px; border: 1px solid var(--line2); border-radius: 4px; padding: 0 5px; background: var(--soft); white-space: nowrap; }
   .lt-mini.first { border-color: color-mix(in srgb, #f472b6 50%, transparent); }
-  .lt-log { max-height: 190px; overflow-y: auto; display: flex; flex-direction: column; gap: 3px; font-size: 13.5px; }
+  .lt-log { max-height: 240px; overflow-y: auto; display: flex; flex-direction: column; gap: 3px; font-size: 13.5px; }
   .lt-log div { padding-left: 8px; border-left: 2px solid var(--line2); color: var(--dim); }
-  .lt-log div:last-child { color: var(--ink); border-left-color: var(--accent); }
+  .lt-log div:first-child { color: var(--ink); border-left-color: var(--accent); font-weight: 700; }
+  /* 방금 일어난 일: 카드를 내면 모두에게 크게 보여요 */
+  .lt-last { position: relative; display: flex; gap: 12px; align-items: center; padding: 12px 14px; border-radius: var(--r-lg); border: 1.5px solid var(--tc, var(--line2)); background: linear-gradient(120deg, color-mix(in srgb, var(--tc, #94a3b8) 16%, var(--card-solid)), var(--card-solid) 70%); animation: ltPop .45s ease-out; }
+  .lt-last .badge { flex: 0 0 auto; width: 62px; height: 62px; border-radius: 14px; display: grid; place-items: center; font-size: 34px; background: color-mix(in srgb, var(--cc, #94a3b8) 22%, transparent); border: 1.5px solid var(--cc, var(--line2)); position: relative; }
+  .lt-last .badge i { position: absolute; right: -6px; top: -8px; font-style: normal; font-family: var(--mono); font-weight: 700; font-size: 12px; background: var(--cc, #94a3b8); color: #0b0d11; border-radius: 5px; padding: 0 5px; }
+  .lt-last .lh { font-size: 13.5px; color: var(--dim); }
+  .lt-last .lh b { color: var(--ink); }
+  .lt-last .ld { font-size: 18px; font-weight: 900; line-height: 1.35; margin-top: 2px; color: var(--tc, var(--ink)); }
+  .lt-last .lm { margin-right: 6px; font-family: var(--mono); font-size: 10.5px; letter-spacing: .1em; color: var(--dim); border: 1px solid var(--line2); border-radius: 3px; padding: 0 5px; }
+  .lt-last.kill { --tc: #f43f5e; } .lt-last.safe { --tc: #34d399; } .lt-last.info { --tc: #38bdf8; } .lt-last.swap { --tc: #fbbf24; }
+  .lt-last.idle { --tc: var(--line2); }
+  .lt-last.idle .ld { font-size: 15px; font-weight: 700; color: var(--dim); }
+  @keyframes ltPop { 0% { transform: scale(.96); opacity: .35; } 55% { transform: scale(1.015); } 100% { transform: none; opacity: 1; } }
+}
   .lt-hand { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
   .lt-hand.one { grid-template-columns: minmax(0, 220px); }
   .lt-card { position: relative; text-align: left; border: 1.5px solid var(--line2); background: linear-gradient(160deg, color-mix(in srgb, var(--cc) 20%, var(--card-solid)), var(--card-solid) 75%); border-radius: var(--r-lg); padding: 12px 12px 14px; cursor: pointer; display: flex; flex-direction: column; gap: 4px; min-height: 170px; }
@@ -54,11 +67,6 @@
   .lt-rrow { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-top: 1px solid var(--line); font-size: 15px; flex-wrap: wrap; }
   .lt-rrow .g { margin-left: auto; font-weight: 800; color: var(--ok); }
   .lt-res h2 { margin-bottom: 6px; }
-  .lt-mback { position: fixed; inset: 0; z-index: 85; background: rgba(3, 4, 8, .7); display: flex; align-items: center; justify-content: center; padding: 16px; }
-  .lt-mbox { background: var(--card-solid, var(--card)); border: 1px solid var(--line2); border-radius: var(--r-lg); padding: 18px; width: 100%; max-width: 460px; max-height: 85vh; overflow-y: auto; }
-  .lt-mbox .actions { display: flex; justify-content: flex-end; margin-top: 14px; }
-  .lt-grow { display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; border-top: 1px solid var(--line); font-size: 14px; }
-  .lt-grow .em { font-size: 26px; }
   `;
   try {
     if (document.head && document.head.appendChild && document.createElement) {
@@ -72,17 +80,16 @@
 
   const TEMPLATE = `<div class="lt">
     <div class="card lt-head" id="lt-head"></div>
+    <div id="lt-last"></div>
     <div id="lt-result"></div>
     <div class="card" id="lt-me"></div>
     <div class="lt-seats" id="lt-seats"></div>
-    <div class="card"><div class="eyebrow"><span>LOG</span><b>LIVE</b></div><div class="lt-log" id="lt-log"></div></div>
+    <div class="card"><div class="eyebrow"><span>LOG</span><b>NEWEST FIRST</b></div><div class="lt-log" id="lt-log"></div></div>
     <div class="card"><div class="eyebrow"><span>MY NOTES</span><b>PRIVATE</b></div><div class="lt-notes" id="lt-notes"></div></div>
-    <div class="card"><button class="btn small" id="lt-guide">📖 카드 설명 보기</button></div>
-    <div id="lt-modal"></div>
   </div>`;
 
   let ctx = null, cur = null, timer = null;
-  let selCard, selTarget, selGuess, modal, sigHead, sigSeats, sigLog, sigMe, sigNotes, sigResult;
+  let selCard, selTarget, selGuess, sigHead, sigSeats, sigLog, sigMe, sigNotes, sigResult, sigLast;
 
   const esc = (s) => ctx.esc(s);
   const fmt = (ms) => { const s = Math.max(0, Math.ceil(ms / 1000)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
@@ -127,8 +134,25 @@
     if (sig === sigLog) return;
     sigLog = sig;
     const el = $('#lt-log');
-    el.innerHTML = G.log.slice(-30).map((l) => `<div>${esc(l.text)}</div>`).join('');
-    el.scrollTop = el.scrollHeight;
+    el.innerHTML = G.log.slice(-30).reverse().map((l) => `<div>${esc(l.text)}</div>`).join('');   // 최신 내역이 맨 위
+    el.scrollTop = 0;
+  }
+
+  // 방금 일어난 일: 누가 어떤 카드로 무엇을 했는지, 결과가 어땠는지를 크게 보여 줘요
+  function renderLast() {
+    const { G } = cur;
+    const e = G.last;
+    const sig = e ? e.seq : 'none';
+    if (sig === sigLast) return;
+    sigLast = sig;
+    const el = $('#lt-last');
+    if (!e) { el.innerHTML = '<div class="card lt-last idle"><div class="badge">💌</div><div><div class="lh">방금 일어난 일</div><div class="ld">아직 아무도 카드를 내지 않았어요</div></div></div>'; return; }
+    const actor = seatById(e.actorId);
+    const mark = { kill: '💀', safe: '🛡️', info: '👀', swap: '🔁', plain: '' }[e.tone] || '';
+    el.innerHTML = `<div class="card lt-last ${esc(e.tone)}" style="--cc:${e.card ? HUE[e.card] : '#94a3b8'}">
+      <div class="badge">${e.card ? esc(cardOf(e.card).emoji) : '🚪'}${e.card ? `<i>${e.card}</i>` : ''}</div>
+      <div><div class="lh"><span class="lm">#${e.seq}${e.auto ? ' · AUTO' : ''}</span>방금 일어난 일 · ${actor ? col(actor) : ''}${e.targetId && e.targetId !== e.actorId ? ` → ${col(seatById(e.targetId))}` : ''}${e.auto ? ' <span class="hint">(시간 초과로 자동)</span>' : ''}</div>
+      <div class="ld">${mark ? `${mark} ` : ''}${esc(e.detail || e.headline)}</div></div></div>`;
   }
 
   function cardBtn(t, idx, opts = {}) {
@@ -232,16 +256,6 @@
     }
   }
 
-  function renderModal() {
-    const root = $('#lt-modal');
-    if (!modal) { root.innerHTML = ''; return; }
-    const { G } = cur;
-    root.innerHTML = `<div class="lt-mback"><div class="lt-mbox"><h3>📖 카드 설명</h3><div class="hint">숫자가 클수록 힘이 세요. 덱은 총 16장이에요.</div>
-      ${Object.keys(G.cards).map((t) => { const c = G.cards[t]; return `<div class="lt-grow"><span class="em">${esc(c.emoji)}</span><div><b>${t}. ${esc(c.name)}</b> <span class="hint">× ${c.count}장</span><div>${esc(c.desc)}</div></div></div>`; }).join('')}
-      <div class="actions"><button class="btn primary" id="lt-mclose">닫기</button></div></div></div>`;
-    $('#lt-mclose').onclick = () => { modal = false; renderModal(); };
-  }
-
   function tick() {
     if (!cur) return;
     const t = $('#lt-timer');
@@ -254,22 +268,21 @@
     mount(c) {
       ctx = c;
       cur = null;
-      selCard = null; selTarget = null; selGuess = null; modal = false;
-      sigHead = sigSeats = sigLog = sigMe = sigNotes = sigResult = '';
+      selCard = null; selTarget = null; selGuess = null;
+      sigHead = sigSeats = sigLog = sigMe = sigNotes = sigResult = sigLast = '';
       ctx.host().innerHTML = TEMPLATE;
-      $('#lt-guide').onclick = () => { modal = true; renderModal(); };
       clearInterval(timer);
       timer = setInterval(tick, 500);
     },
     update(S, G) {
       cur = { S, G };
       renderHead();
+      renderLast();
       renderSeats();
       renderLog();
       renderMe();
       renderNotes();
       renderResult();
-      if (modal) renderModal();
       tick();
     },
     unmount() {

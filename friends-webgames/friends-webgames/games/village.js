@@ -128,6 +128,34 @@ module.exports = {
   ],
   min: CFG.MIN,
   max: CFG.MAX,
+  help: {
+    summary: [
+      '🌙 **밤에는 능력을 쓰고**, 악마가 한 명을 습격해요. 아침에 누가 죽었는지, 내 정보가 알려져요.',
+      '☀️ **낮에는 토론하고**, 의심되는 사람을 지목해 **투표로 처형**해요. 귓속말도 보낼 수 있어요.',
+      '🏆 마을 편은 **악마를 처형하면 승리**, 악 편은 **살아남은 사람이 둘만 남으면 승리**해요!',
+    ],
+    sections: [
+      { title: '하루의 흐름', lines: [
+        '밤: 모두 눈을 감고, 능력이 있는 사람만 화면에서 선택해요. (첫 밤에는 습격이 없어요)',
+        '아침: 밤에 죽은 사람의 이름과 내가 받은 정보가 알려져요. 죽은 사람의 직업은 비밀이에요.',
+        '낮 토론(2분): 채팅과 귓속말로 이야기해요. 살아 있는 사람 과반이 ‘토론 끝내기’를 누르면 일찍 넘어가요.',
+        '지목과 투표: 살아 있는 사람은 하루에 한 번 다른 사람을 지목할 수 있어요. 지목되면 처형 찬반 투표를 하고, 절반 이상 찬성한 가장 높은 득표자가 처형 후보가 돼요.',
+        '낮이 끝나면 후보가 처형돼요. 아무도 없으면 처형 없이 밤이 와요.',
+      ] },
+      { title: '꼭 알아둘 것', lines: [
+        '독, 술꾼, 첩자, 은둔자 때문에 **정보가 틀리거나 다르게 보일 수 있어요.** 말을 그대로 믿지 마세요.',
+        '악마와 하수인은 첫 밤에 서로를 알아요. 악마는 마을에 없는 마을 편 직업 3개를 받아서 허세를 부릴 수 있어요.',
+        '죽어도 게임에 남아요. 채팅, 귓속말, 구경이 가능하고, 투표에 **찬성할 때 한 번만** 쓸 수 있는 유령표가 있어요.',
+        '이기면 그 편 전원이 방 점수 1점을 얻어요.',
+      ] },
+    ],
+    groups: [
+      { title: '🟢 마을 사람 (13) — 악마를 찾는 편', items: Object.values(ROLES).filter((r) => r.team === 'town').map((r) => ({ emoji: r.emoji, title: r.name, color: '#34d399', text: r.desc })) },
+      { title: '🟡 외부인 (4) — 마을 편이지만 골칫거리', items: Object.values(ROLES).filter((r) => r.team === 'out').map((r) => ({ emoji: r.emoji, title: r.name, color: '#fbbf24', text: r.desc })) },
+      { title: '🔴 하수인 (4) — 악마를 돕는 편', items: Object.values(ROLES).filter((r) => r.team === 'minion').map((r) => ({ emoji: r.emoji, title: r.name, color: '#fb7185', text: r.desc })) },
+      { title: '🩸 악마 (1)', items: Object.values(ROLES).filter((r) => r.team === 'demon').map((r) => ({ emoji: r.emoji, title: r.name, color: '#f43f5e', text: r.desc })) },
+    ],
+  },
 
   create(api) {
     const seatOf = (g, id) => g.seats.find((s) => s.id === id);

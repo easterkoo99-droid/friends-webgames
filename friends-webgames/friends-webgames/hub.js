@@ -25,7 +25,7 @@ const CFG = {
 };
 
 // 화면 파일(index.html)과 서버 파일(hub.js)이 같은 버전인지 확인하는 번호예요. 규칙이 바뀌면 둘 다 올리고 이 번호를 같이 올려요.
-const PROTO = 4;
+const PROTO = 5;
 
 const AVATARS = ['🐯', '🐱', '🐻', '🐰', '🦊', '🐼', '🐸', '🐵', '🐧', '🦁', '🐮', '🐷', '🐨', '🐶', '🦄', '🐙'];
 const COLORS = [
@@ -69,7 +69,7 @@ module.exports = function registerHub(io) {
       hostId: room.hostId,
       phase: room.phase,                 // 'lobby' | 'game'
       gameNo: room.gameNo,
-      games: PLUGINS.map((p) => ({ id: p.id, name: p.name, emoji: p.emoji, accent: p.accent || '#7c6cff', desc: p.desc, rules: p.rules || [], min: p.min, max: p.max })),
+      games: PLUGINS.map((p) => ({ id: p.id, name: p.name, emoji: p.emoji, accent: p.accent || '#7c6cff', desc: p.desc, rules: p.rules || [], min: p.min, max: p.max, help: p.id === room.gameId ? (p.help || null) : null })),   // 설명은 지금 고른 게임 것만 보내요
       selected: room.gameId,
       proto: PROTO,
       hostOnly: CFG.HOST_ONLY_SWITCH,
