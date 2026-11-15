@@ -1,0 +1,281 @@
+/**
+ * 주사위 카지노 화면 (게임 플러그인, 코드 이름: casino)
+ *  - 방/채팅/준비/게임 바꾸기는 index.html 허브가 맡아요. 여기서는 게임 화면만 그려요.
+ *  - 굴린 주사위, 고를 수 있는 숫자, 정산 결과는 서버가 알려 줘요. 화면은 그대로 보여 주기만 해요.
+ */
+(() => {
+  'use strict';
+  window.GAME_UI = window.GAME_UI || {};
+  const $ = (s) => document.querySelector(s);
+  const $$ = (s) => document.querySelectorAll(s);
+
+  const CSS = `
+  .cz { display: flex; flex-direction: column; gap: 12px; word-break: keep-all; overflow-wrap: break-word; }
+  .cz .card h3 { margin-bottom: 8px; }
+  .cz-head { padding-top: 11px; padding-bottom: 11px; }
+  .cz-hrow { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .cz-head .t { font-size: 19px; font-weight: 900; }
+  .cz-head .t small { font-family: var(--mono); font-size: 12px; color: var(--accent); margin-right: 8px; letter-spacing: .1em; }
+  .cz-timer { font-family: var(--mono); font-size: 20px; font-weight: 600; color: var(--accent); font-variant-numeric: tabular-nums; }
+  .cz-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; }
+  .cz-tag { font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: var(--r); border: 1px solid var(--line2); color: var(--dim); }
+  .cz-tag.hot { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 55%, transparent); }
+  /* 방금 일어난 일 */
+  .cz-last { display: flex; gap: 12px; align-items: center; padding: 12px 14px; border-radius: var(--r-lg); border: 1.5px solid var(--tc, var(--line2)); background: linear-gradient(120deg, color-mix(in srgb, var(--tc, #94a3b8) 15%, var(--card-solid)), var(--card-solid) 70%); animation: czPop .45s ease-out; }
+  .cz-last .ic { flex: 0 0 auto; width: 54px; height: 54px; border-radius: 14px; display: grid; place-items: center; font-size: 30px; background: color-mix(in srgb, var(--tc, #94a3b8) 20%, transparent); border: 1.5px solid var(--tc, var(--line2)); }
+  .cz-last .lh { font-size: 13px; color: var(--dim); }
+  .cz-last .lh .m { margin-right: 6px; font-family: var(--mono); font-size: 10.5px; border: 1px solid var(--line2); border-radius: 3px; padding: 0 5px; }
+  .cz-last .ld { font-size: 17px; font-weight: 900; line-height: 1.35; margin-top: 2px; color: var(--tc, var(--ink)); }
+  .cz-last.good { --tc: #34d399; } .cz-last.bad { --tc: #f43f5e; } .cz-last.info { --tc: #38bdf8; }
+  @keyframes czPop { 0% { transform: scale(.96); opacity: .35; } 55% { transform: scale(1.015); } 100% { transform: none; opacity: 1; } }
+  /* 주사위 */
+  .cz-die { --dc: #94a3b8; display: inline-grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); width: var(--ds, 30px); height: var(--ds, 30px); padding: calc(var(--ds, 30px) * .14); border-radius: calc(var(--ds, 30px) * .24); background: var(--dc); box-shadow: inset 0 -2px 0 rgba(0, 0, 0, .22), 0 1px 2px rgba(0, 0, 0, .3); vertical-align: middle; }
+  .cz-die i { border-radius: 50%; margin: 12%; background: transparent; }
+  .cz-die i.on { background: var(--pip, #fff); }
+  .cz-die.white { --dc: #f1f5f9; --pip: #1e293b; }
+  .cz-die.s { --ds: 20px; } .cz-die.l { --ds: 40px; }
+  /* 내 차례에는 굴린 주사위와 선택 버튼이 화면 아래에 붙어 있어서, 카지노 판을 보면서 고를 수 있어요 */
+  .cz-roll.mine { position: sticky; bottom: calc(var(--dock, 92px) + 8px); z-index: 20; padding-top: 10px; padding-bottom: 12px; border-color: var(--accent); box-shadow: 0 -10px 26px rgba(0, 0, 0, .22); }
+  .cz-roll .dice { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 2px; }
+  .cz-roll .dice.shake .cz-die { animation: czShake .55s ease-out; }
+  @keyframes czShake { 0% { transform: translateY(-14px) rotate(-30deg); opacity: .3; } 60% { transform: translateY(2px) rotate(8deg); } 100% { transform: none; opacity: 1; } }
+  .cz-choices { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 8px; }
+  .cz-choice { display: flex; align-items: center; gap: 8px; padding: 7px 10px; border: 1.5px solid var(--line2); border-radius: var(--r-lg); background: var(--soft); text-align: left; cursor: pointer; }
+  .cz-choice:hover, .cz-choice.on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, transparent); }
+  .cz-choice b { font-size: 14px; display: block; line-height: 1.25; }
+  .cz-choice span { font-size: 11.5px; color: var(--dim); }
+  .cz-choice[disabled] { cursor: default; opacity: .7; }
+  /* 카지노 판 */
+  .cz-board { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  @media (min-width: 640px) { .cz-board { grid-template-columns: repeat(3, 1fr); } }
+  .cz-cas { background: var(--card); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 9px 10px 10px; display: flex; flex-direction: column; gap: 7px; min-height: 150px; }
+  .cz-cas.pick { border-color: var(--accent); box-shadow: 0 0 18px color-mix(in srgb, var(--accent) 22%, transparent); }
+  .cz-cas .top { display: flex; align-items: center; justify-content: space-between; }
+  .cz-cas .top .tot { font-family: var(--mono); font-size: 11.5px; color: var(--dim); }
+  .cz-notes { display: flex; flex-wrap: wrap; gap: 4px; }
+  .cz-note { font-family: var(--mono); font-size: 12px; font-weight: 700; padding: 2px 6px; border-radius: 5px; background: color-mix(in srgb, #34d399 16%, var(--card-solid)); border: 1px solid color-mix(in srgb, #34d399 55%, transparent); color: #34d399; }
+  .cz-note.big { color: #f59e0b; border-color: color-mix(in srgb, #f59e0b 60%, transparent); background: color-mix(in srgb, #f59e0b 14%, var(--card-solid)); }
+  .cz-rows { display: flex; flex-direction: column; gap: 5px; }
+  .cz-prow { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+  .cz-prow .nm { font-size: 11px; font-weight: 800; width: 100%; opacity: .9; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cz-prow .cnt { font-family: var(--mono); font-size: 11px; color: var(--dim); margin-left: 2px; }
+  .cz-prow.lead .nm::after { content: ' 👑'; }
+  .cz-prow.tie .nm { text-decoration: line-through; opacity: .55; }
+  .cz-empty { font-size: 12px; color: var(--dim); }
+  /* 정산 */
+  .cz-pay { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+  .cz-pc { border: 1px solid var(--line); border-radius: var(--r-lg); padding: 8px 10px; }
+  .cz-pc .ph { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 14px; }
+  .cz-pr { display: flex; align-items: center; gap: 8px; margin-top: 6px; font-size: 13.5px; flex-wrap: wrap; }
+  .cz-pr .who { font-weight: 800; flex: 1 1 100px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cz-pr .res { margin-left: auto; font-weight: 800; }
+  .cz-pr .win { color: #34d399; } .cz-pr .lose { color: #f43f5e; } .cz-pr .none { color: var(--dim); font-weight: 500; }
+  .cz-pr.x .who { text-decoration: line-through; opacity: .6; }
+  /* 자리 */
+  .cz-seats { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+  .cz-seat { position: relative; background: var(--card); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 10px 11px 10px 14px; display: flex; flex-direction: column; gap: 4px; }
+  .cz-seat::before { content: ''; position: absolute; left: 0; top: 9px; bottom: 9px; width: 2px; border-radius: 2px; background: var(--pc, var(--line2)); }
+  .cz-seat.turn { border-color: var(--accent); box-shadow: 0 0 18px color-mix(in srgb, var(--accent) 16%, transparent); }
+  .cz-seat.left { opacity: .45; }
+  .cz-seat .sn { font-weight: 800; font-size: 14px; }
+  .cz-seat .sm { font-family: var(--mono); font-size: 15px; font-weight: 700; color: #34d399; }
+  .cz-seat .sd { font-size: 12.5px; color: var(--dim); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .cz-log { max-height: 220px; overflow-y: auto; display: flex; flex-direction: column; gap: 3px; font-size: 13.5px; }
+  .cz-log div { padding-left: 8px; border-left: 2px solid var(--line2); color: var(--dim); }
+  .cz-log div:first-child { color: var(--ink); border-left-color: var(--accent); font-weight: 700; }
+  .cz-res h2 { margin-bottom: 6px; }
+  `;
+  try {
+    if (document.head && document.head.appendChild && document.createElement) {
+      const st = document.createElement('style');
+      st.textContent = CSS;
+      document.head.appendChild(st);
+    }
+  } catch (e) { /* 스타일을 못 넣어도 동작은 해요 */ }
+
+  const TEMPLATE = `<div class="cz" id="cz-root">
+    <div class="card cz-head" id="cz-head"></div>
+    <div id="cz-last"></div>
+    <div class="cz-board" id="cz-board"></div>
+    <div class="card cz-roll" id="cz-roll"></div>
+    <div class="card" id="cz-pay"></div>
+    <div class="cz-seats" id="cz-seats"></div>
+    <div class="card"><div class="eyebrow"><span>LOG</span><b>NEWEST FIRST</b></div><div class="cz-log" id="cz-log"></div></div>
+  </div>`;
+
+  const PIPS = { 1: [4], 2: [0, 8], 3: [0, 4, 8], 4: [0, 2, 6, 8], 5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8] };
+  let ctx = null, cur = null, timer = null;
+  let sigHead, sigLast, sigRoll, sigBoard, sigPay, sigSeats, sigLog, lastRollSeq = 0;
+
+  const esc = (s) => ctx.esc(s);
+  const fmtMoney = (v) => `$${Number(v).toLocaleString('en-US')}`;
+  const fmt = (ms) => { const s = Math.max(0, Math.ceil(ms / 1000)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
+  const seatById = (id) => cur.G.seats.find((s) => s.id === id);
+  const col = (s) => (s ? `<span style="color:${esc(s.color)};font-weight:800">${esc(s.avatar)} ${esc(s.name)}</span>` : '<b>⚪ 흰색(가상의 사람)</b>');
+  const die = (v, color, cls = '') => `<span class="cz-die ${cls}${color ? '' : ' white'}" style="${color ? `--dc:${esc(color)}` : ''}">${[0, 1, 2, 3, 4, 5, 6, 7, 8].map((i) => `<i${(PIPS[v] || []).includes(i) ? ' class="on"' : ''}></i>`).join('')}</span>`;
+  const dice = (v, color, k, cls) => Array.from({ length: k }, () => die(v, color, cls)).join('');
+
+  function renderHead() {
+    const { S, G } = cur;
+    const sig = JSON.stringify([G.round, G.phase, G.startId, G.turnId, G.white, G.seats.length]);
+    if (sig === sigHead) return;
+    sigHead = sig;
+    const start = seatById(G.startId);
+    const tags = [`<span class="cz-tag">${G.seats.length}명</span>`, `<span class="cz-tag">돈 카드 ${fmtMoney(G.minPot)} 이상씩</span>`];
+    if (start) tags.unshift(`<span class="cz-tag">🚩 시작 ${esc(start.name)}</span>`);
+    if (G.white) tags.push('<span class="cz-tag hot">⚪ 흰색 주사위 포함</span>');
+    const turn = seatById(G.turnId);
+    const state = G.phase === 'play' && turn ? `👉 ${col(turn)}님 차례` : G.phase === 'roundEnd' ? '💰 정산 중' : G.phase === 'ended' ? '🏆 게임 끝' : '';
+    $('#cz-head').innerHTML = `<div class="cz-hrow"><div class="t"><small>ROUND ${Math.min(G.round, G.rounds)} / ${G.rounds}</small>${state}</div><span class="cz-timer" id="cz-timer"></span></div><div class="cz-tags">${tags.join('')}</div>`;
+  }
+
+  // 방금 일어난 일: 누가 몇 번 카지노에 몇 개를 놓았는지, 정산 결과를 크게 보여 줘요
+  function renderLast() {
+    const { G } = cur;
+    const e = G.last;
+    const sig = e ? e.seq : 'none';
+    if (sig === sigLast) return;
+    sigLast = sig;
+    const el = $('#cz-last');
+    if (!e) { el.innerHTML = ''; return; }
+    el.innerHTML = `<div class="card cz-last ${esc(e.tone)}"><div class="ic">${esc(e.icon || '🎲')}</div><div>
+      <div class="lh"><span class="m">#${e.seq}</span>방금 일어난 일</div>
+      <div class="ld">${esc(e.headline)}</div>
+      <div class="lh" style="margin-top:3px;font-size:14px;color:var(--ink)">${esc(e.detail)}</div></div></div>`;
+  }
+
+  // 지금 굴린 주사위와 고를 수 있는 숫자
+  function renderRoll() {
+    const { S, G } = cur;
+    const el = $('#cz-roll');
+    const me = G.me;
+    const sig = JSON.stringify([G.phase, G.roll, me && me.choices, G.turnId]);
+    if (sig === sigRoll) return;
+    sigRoll = sig;
+    if (el.classList && el.classList.toggle) el.classList.toggle('mine', !!(me && me.myTurn));
+    if (G.phase !== 'play' || !G.roll) {
+      el.hidden = true;
+      return;
+    }
+    el.hidden = false;
+    const roller = seatById(G.roll.seatId);
+    const shake = G.roll.seq !== lastRollSeq;
+    lastRollSeq = G.roll.seq;
+    const mine = me && me.myTurn;
+    const sorted = G.roll.dice.slice().sort((a, b) => a.v - b.v);
+    el.innerHTML = `<div class="eyebrow"><span>ROLL</span><b>${mine ? 'YOUR TURN' : 'WATCHING'}</b></div>
+      <b>${mine ? '🎲 내가 굴린 주사위예요. 한 숫자를 골라 그 눈을 전부 놓아요' : `🎲 ${col(roller)}님이 굴린 주사위예요`}</b>
+      <div class="dice${shake ? ' shake' : ''}">${sorted.map((d) => die(d.v, d.k === 'o' ? (roller ? roller.color : '#94a3b8') : null)).join('')}</div>
+      ${mine ? `<div class="hint" style="margin:4px 0 0">같은 눈은 <b>전부</b> 놓아야 해요.</div><div class="cz-choices">${me.choices.map((c) => `<button class="cz-choice" data-pick="${c.n}"><span style="flex:0 0 auto">${die(c.n, roller ? roller.color : '#94a3b8')}</span><div><b>${c.n}번 카지노에 ${c.total}개</b><span>${c.white ? `내 ${c.own}개 + 흰색 ${c.white}개` : `내 주사위 ${c.own}개`}</span></div></button>`).join('')}</div>` : '<div class="hint" style="margin:6px 0 0">차례를 기다리는 중이에요.</div>'}`;
+    $$('[data-pick]').forEach((b) => { b.onclick = async () => { const r = await ctx.act('place', { n: Number(b.dataset.pick) }); if (r && !r.ok) ctx.toast(r.error); }; });
+  }
+
+  function renderBoard() {
+    const { S, G } = cur;
+    const me = G.me;
+    const pickable = me && me.myTurn ? me.choices.map((c) => c.n) : [];
+    const sig = JSON.stringify([G.casinos, G.phase, pickable, G.seats.map((s) => s.color)]);
+    if (sig === sigBoard) return;
+    sigBoard = sig;
+    $('#cz-board').innerHTML = G.casinos.map((c) => {
+      const rows = c.dice.map((d) => ({ seat: seatById(d.id), count: d.count }));
+      if (c.neutral > 0) rows.push({ seat: null, count: c.neutral });
+      rows.sort((a, b) => b.count - a.count);
+      const top = rows.length ? rows[0].count : 0;
+      const counts = {};
+      rows.forEach((r) => { counts[r.count] = (counts[r.count] || 0) + 1; });
+      const notes = c.notes.map((v, i) => `<span class="cz-note${i === 0 ? ' big' : ''}">${fmtMoney(v)}</span>`).join('');
+      const rowsHtml = rows.length ? rows.map((r) => `<div class="cz-prow${r.count === top && counts[top] === 1 ? ' lead' : ''}${counts[r.count] > 1 ? ' tie' : ''}"><span class="nm" style="color:${r.seat ? esc(r.seat.color) : 'var(--dim)'}">${r.seat ? esc(r.seat.name) : '⚪ 흰색'}</span>${dice(c.n, r.seat ? r.seat.color : null, Math.min(r.count, 12), 's')}<span class="cnt">×${r.count}</span></div>`).join('') : '<div class="cz-empty">아직 주사위가 없어요</div>';
+      return `<div class="cz-cas${pickable.includes(c.n) ? ' pick' : ''}"><div class="top">${die(c.n, '#64748b', 'l')}<span class="tot">${fmtMoney(c.total)}</span></div><div class="cz-notes">${notes}</div><div class="cz-rows">${rowsHtml}</div></div>`;
+    }).join('');
+  }
+
+  function renderPay() {
+    const { S, G } = cur;
+    const el = $('#cz-pay');
+    const sig = JSON.stringify([G.phase, G.payout, G.result, G.nextReady, G.round]);
+    if (sig === sigPay) return;
+    sigPay = sig;
+    if (!G.payout) { el.hidden = true; return; }
+    el.hidden = false;
+    const total = G.seats.filter((s) => !s.left).length;
+    const ready = G.nextReady.includes(S.you);
+    const cards = G.payout.map((c) => `<div class="cz-pc"><div class="ph">${die(c.n, '#64748b', 's')} ${c.n}번 카지노 <span style="margin-left:auto;font-family:var(--mono);font-size:12px;color:var(--dim)">${c.notes.map(fmtMoney).join(' · ')}</span></div>
+      ${c.rows.length ? c.rows.map((r) => { const s = r.who === 'N' ? null : seatById(r.who); return `<div class="cz-pr${r.cancelled ? ' x' : ''}"><span class="who">${col(s)}</span><span>${dice(c.n, s ? s.color : null, Math.min(r.count, 8), 's')} ×${r.count}</span><span class="res ${r.cancelled ? 'lose' : r.won ? 'win' : 'none'}">${r.cancelled ? '💥 상쇄' : r.won ? `${r.who === 'N' ? '(더미로) ' : ''}${fmtMoney(r.won)}` : '못 받았어요'}</span></div>`; }).join('') : '<div class="cz-pr"><span class="none">아무도 놓지 않았어요</span></div>'}
+      ${c.leftover.length ? `<div class="hint" style="margin:6px 0 0">남은 돈 카드 ${c.leftover.map(fmtMoney).join(', ')}는 더미로 돌아가요</div>` : ''}</div>`).join('');
+    let head;
+    let foot = '';
+    if (G.phase === 'ended') {
+      const r = G.result;
+      head = `<div class="cz-res"><div class="eyebrow"><span>FINAL</span><b>${r.abort ? 'ABORTED' : 'WINNER'}</b></div><h2>${r.abort ? '⚪ 게임 중단' : '🏆 우승!'}</h2><div>${esc(r.reason)}</div>
+        <div style="margin-top:8px">${r.players.map((p, i) => `<div class="cz-pr"><span class="who">${i + 1}. ${esc(p.avatar)} ${esc(p.name)}${p.win ? ' 🏆' : ''}</span><span style="font-family:var(--mono)">${fmtMoney(p.money)} · 카드 ${p.notes}장</span>${p.gain ? '<span class="res win">+1점</span>' : ''}</div>`).join('')}</div>
+        <p class="hint">아래는 마지막 라운드 정산이에요. 같은 게임을 다시 하거나, 방장이 게임을 바꿀 수 있어요.</p></div>`;
+    } else {
+      head = `<div class="eyebrow"><span>PAYOUT</span><b>ROUND ${G.round} / ${G.rounds}</b></div><h3>💰 ${G.round}라운드 정산</h3><div class="hint" style="margin:0">같은 개수를 놓은 사람끼리는 상쇄(💥)돼서 못 받아요.</div>`;
+      foot = `<button class="btn primary big" id="cz-next" ${ready ? 'disabled' : ''} style="margin-top:12px">${ready ? `기다리는 중… (${G.nextReady.length}/${total})` : `다음 라운드로 (${G.nextReady.length}/${total}) · <span id="cz-nt"></span>`}</button>`;
+    }
+    el.innerHTML = `${head}<div class="cz-pay">${cards}</div>${foot}`;
+    const nb = $('#cz-next');
+    if (nb) nb.onclick = async () => { const r = await ctx.act('next'); if (r && !r.ok) ctx.toast(r.error); };
+  }
+
+  function renderSeats() {
+    const { G } = cur;
+    const sig = JSON.stringify([G.seats, G.turnId]);
+    if (sig === sigSeats) return;
+    sigSeats = sig;
+    $('#cz-seats').innerHTML = G.seats.map((s) => `<div class="cz-seat${s.turn ? ' turn' : ''}${s.left ? ' left' : ''}" style="--pc:${esc(s.color)}">
+      <div class="sn">${col(s)}${s.id === G.startId ? ' 🚩' : ''}</div>
+      <div class="sm">${fmtMoney(s.money)}</div>
+      <div class="sd">${s.left ? '떠났어요' : `💰 카드 ${s.noteCount}장`}</div>
+      <div class="sd">${s.left ? '' : `🎲 남은 주사위 ${s.own + s.white}개${s.white ? ` (흰색 ${s.white})` : ''}`}</div>
+    </div>`).join('');
+  }
+
+  function renderLog() {
+    const { G } = cur;
+    const sig = String(G.log.length) + (G.log.length ? G.log[G.log.length - 1].t : '');
+    if (sig === sigLog) return;
+    sigLog = sig;
+    const el = $('#cz-log');
+    el.innerHTML = G.log.slice(-40).reverse().map((l) => `<div>${esc(l.text)}</div>`).join('');   // 최신이 맨 위
+    el.scrollTop = 0;
+  }
+
+  function tick() {
+    if (!cur) return;
+    const t = $('#cz-timer');
+    if (t) t.textContent = cur.G.endsAt && cur.G.phase === 'play' ? fmt(cur.G.endsAt - ctx.now()) : '';
+    const n = $('#cz-nt');
+    if (n) n.textContent = cur.G.endsAt ? fmt(cur.G.endsAt - ctx.now()) : '';
+  }
+
+  window.GAME_UI.casino = {
+    mount(c) {
+      ctx = c;
+      cur = null;
+      sigHead = sigLast = sigRoll = sigBoard = sigPay = sigSeats = sigLog = '';
+      lastRollSeq = 0;
+      ctx.host().innerHTML = TEMPLATE;
+      clearInterval(timer);
+      timer = setInterval(tick, 500);
+    },
+    update(S, G) {
+      cur = { S, G };
+      renderHead();
+      renderLast();
+      renderRoll();
+      renderBoard();
+      renderPay();
+      renderSeats();
+      renderLog();
+      tick();
+    },
+    unmount() {
+      clearInterval(timer);
+      timer = null;
+      cur = null;
+      if (ctx) ctx.bar().innerHTML = '';
+    },
+  };
+})();
