@@ -1,13 +1,31 @@
 'use strict';
 /**
- * 게임 목록. 새 게임을 추가하려면
- *  1) games/내게임.js 를 만들고 (spyfall.js 를 참고)
- *  2) 아래 배열에 한 줄을 더하고
- *  3) public/games/내게임.js 를 만들어 화면을 그려요.
- * 대기실에 게임 카드가 자동으로 나타나요.
+ * 게임 목록 (자동으로 모아요)
+ *  - games/ 폴더에 게임 파일(spyfall.js 처럼 id 와 create 가 있는 파일)을 넣으면 대기실에 게임 카드가 자동으로 나타나요.
+ *  - public/games/ 폴더에 같은 이름의 화면 파일을 넣으면 서버가 알아서 화면에 연결해요. (index.html 을 고칠 필요가 없어요)
+ *  - 목록 순서는 아래 ORDER 에 적힌 게임이 먼저고, 나머지는 파일 이름 순서예요.
  */
-module.exports = [
-  require('./spyfall'),
-  require('./village'),
-  require('./letter'),
-];
+const fs = require('fs');
+const path = require('path');
+
+const ORDER = ['spyfall', 'village', 'letter', 'casino'];
+const SKIP = new Set(['index.js', 'util.js']);
+
+const plugins = [];
+fs.readdirSync(__dirname)
+  .filter((f) => f.endsWith('.js') && !SKIP.has(f))
+  .sort()
+  .forEach((f) => {
+    try {
+      const m = require(path.join(__dirname, f));
+      if (m && m.id && typeof m.create === 'function') plugins.push(m);
+      else console.warn(`[games] ${f}: 게임 파일이 아니라서 건너뛰었어요. (id 와 create 가 필요해요)`);
+    } catch (e) {
+      console.error(`[games] ${f}: 불러오지 못했어요 → ${e.message}`);
+    }
+  });
+
+const rank = (p) => { const i = ORDER.indexOf(p.id); return i < 0 ? 999 : i; };
+plugins.sort((a, b) => rank(a) - rank(b) || String(a.id).localeCompare(String(b.id)));
+
+module.exports = plugins;
