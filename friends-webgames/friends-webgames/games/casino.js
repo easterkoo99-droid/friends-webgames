@@ -17,6 +17,7 @@ const CFG = {
   OWN_DICE: 8,                 // 한 사람이 가진 주사위
   MIN_POT: 50000,              // 카지노마다 이 금액 이상이 될 때까지 돈 카드를 놓아요
   get ROLL_MS() { return Number(process.env.CASINO_ROLL_MS) || 1800; },   // 주사위가 굴러가는 장면을 보여 주는 시간 (이 동안은 고를 수 없어요)
+  ROLL_WAIT_MS: 30 * 1000,     // 차례가 되면 ‘굴리기’ 버튼을 누를 때까지 기다리는 시간 (넘으면 자동으로 굴러가요)
   AUTO_HOLD_MS: 1200,          // 고를 눈이 하나뿐일 때: 결과를 보여 준 뒤 자동으로 놓을 때까지
   TURN_MS: 45 * 1000,          // 숫자를 고르는 제한 시간 (넘으면 가장 많은 쪽으로 자동 선택)
   NEXT_MS: 15 * 1000,          // 정산을 보고 다음 라운드로 넘어가기까지 (모두 누르면 바로)
@@ -40,10 +41,10 @@ const HELP = {
   sections: [
     { title: '진행 방법', lines: [
       '카지노 6곳(1~6번)이 있고, 라운드가 시작되면 카지노마다 **합계 5만 달러 이상**이 되도록 돈 카드가 놓여요.',
-      '모두 자기 색 주사위 8개를 들고 시작해요. 내 차례가 되면 **남은 주사위를 전부** 굴려요.',
+      '모두 자기 색 주사위 8개를 들고 시작해요. 내 차례가 되면 **`굴리기` 버튼을 눌러** 남은 주사위를 전부 굴려요.',
       '굴린 눈 중 **한 숫자를 골라**, 그 눈이 나온 주사위를 **전부** 같은 번호 카지노에 놓아요. 일부만 놓을 수는 없어요.',
       '남은 주사위는 다음 내 차례에 다시 굴려요. 주사위를 다 놓은 사람은 건너뛰고, **모두 다 놓을 때까지** 돌아요.',
-      '내 차례에는 주사위가 굴러가는 장면이 먼저 나와요. 그 뒤 45초 안에 고르고, 시간이 지나면 가장 많이 나온 눈으로 자동으로 놓아요.',
+      '`굴리기` 버튼은 30초 안에 눌러요. 안 누르면 자동으로 굴러가요. 주사위가 굴러가는 장면이 끝나면 45초 안에 숫자를 고르고, 시간이 지나면 가장 많이 나온 눈으로 자동으로 놓아요.',
     ] },
     { title: '정산 (라운드가 끝났을 때)', lines: [
       '카지노마다 먼저 **같은 개수의 주사위를 놓은 사람들**을 찾아요. 그 사람들의 주사위는 **모두 빠지고** 돈을 못 받아요.',
@@ -80,7 +81,7 @@ module.exports = {
   accent: '#f59e0b',
   desc: '주사위를 굴려 카지노에 걸어요. 가장 많이 건 사람이 큰돈을 가져가지만, 같은 개수는 서로 상쇄!',
   rules: [
-    '카지노 6곳(1~6번)에 돈 카드가 있어요. 내 차례에 주사위를 전부 굴리고, 한 숫자의 주사위를 전부 그 번호 카지노에 놓아요.',
+    '카지노 6곳(1~6번)에 돈 카드가 있어요. 내 차례에 굴리기 버튼을 눌러 주사위를 전부 굴리고, 한 숫자의 주사위를 전부 그 번호 카지노에 놓아요.',
     '모두 주사위를 다 놓으면 정산해요. 카지노마다 주사위를 가장 많이 놓은 사람이 가장 큰 돈 카드를 가져가요.',
     '같은 개수를 놓은 사람끼리는 서로 상쇄돼서 아무도 돈을 못 받아요.',
     '2~4명일 때는 흰색 주사위가 더해져 가상의 한 사람(주사위 8개)이 더 있는 것처럼 정산해요.',
@@ -133,7 +134,7 @@ module.exports = {
     function newRound(room) {
       const g = room.g;
       clearTimers(g);
-      g.round += 1; g.phase = 'play'; g.payout = null; g.nextReady = new Set(); g.roll = null;
+      g.round += 1; g.phase = 'play'; g.payout = null; g.nextReady = new Set(); g.roll = null; g.awaitRoll = false;
       const act = active(g);
       const wp = whitePer(act.length);
       g.seats.forEach((s) => { s.own = s.left ? 0 : CFG.OWN_DICE; s.white = s.left ? 0 : wp; });
@@ -171,14 +172,25 @@ module.exports = {
       clearTimers(g);
       const idx = nextWithDice(g, from);
       if (idx < 0) return payout(room);
-      const s = g.seats[idx];
-      g.turnIdx = idx;
+      g.turnIdx = idx; g.roll = null; g.awaitRoll = true;
+      g.turnEnds = Date.now() + CFG.ROLL_WAIT_MS;
+      // 차례가 된 사람이 ‘굴리기’ 버튼을 눌러야 굴러가요. 제한 시간이 지나면 자동으로 굴러가요.
+      later(g, CFG.ROLL_WAIT_MS, () => { if (g.phase === 'play' && g.awaitRoll && g.turnIdx === idx) doRoll(room, g.seats[idx], 'auto'); });
+      api.broadcast(room);
+    }
+    function doRoll(room, s, mode) {
+      const g = room.g;
+      clearTimers(g);
+      g.awaitRoll = false;
       g.rollSeq = (g.rollSeq || 0) + 1;
       const seq = g.rollSeq;
       const now = Date.now();
-      g.roll = { idx, dice: rollDice(g, s), seq, startedAt: now, openAt: now + CFG.ROLL_MS, open: false };
+      g.roll = { idx: g.turnIdx, dice: rollDice(g, s), seq, startedAt: now, openAt: now + CFG.ROLL_MS, open: false };
       g.turnEnds = 0;
+      const n = g.roll.dice.length;
       const values = [...new Set(g.roll.dice.map((d) => d.v))];
+      pub(room, mode === 'auto' ? `⏰ ${s.name}님이 시간 안에 굴리지 못해 주사위 ${n}개가 자동으로 굴러갔어요.` : `🎲 ${s.name}님이 주사위 ${n}개를 굴렸어요.`);
+      setEvent(g, { tone: 'info', icon: '🎲', headline: `${s.name}님이 주사위 ${n}개를 굴렸어요${mode === 'auto' ? ' (시간이 지나 자동으로)' : ''}`, detail: '주사위가 굴러가는 중이에요…', auto: mode === 'auto' });
       // 주사위가 굴러가는 장면이 끝나면 고를 수 있어요 (그때부터 제한 시간이 흘러요)
       later(g, CFG.ROLL_MS, () => {
         if (!g.roll || g.roll.seq !== seq) return;
@@ -258,7 +270,7 @@ module.exports = {
       const top = g.seats.slice().sort((a, b) => roundGain(b) - roundGain(a))[0];
       setEvent(g, { tone: 'good', icon: '💰', headline: `${g.round}라운드 정산`, detail: roundGain(top) > 0 ? `이번 라운드는 ${top.name}님이 ${money(roundGain(top))}로 가장 많이 벌었어요` : '이번 라운드는 아무도 돈을 못 벌었어요', auto: false });
       if (g.round >= CFG.ROUNDS) return finish(room);
-      g.phase = 'roundEnd'; g.nextAt = Date.now() + CFG.NEXT_MS; g.turnIdx = -1;
+      g.phase = 'roundEnd'; g.nextAt = Date.now() + CFG.NEXT_MS; g.turnIdx = -1; g.awaitRoll = false;
       later(g, CFG.NEXT_MS, () => nextRound(room));
       api.broadcast(room);
     }
@@ -271,7 +283,7 @@ module.exports = {
     function finish(room, abort) {
       const g = room.g;
       clearTimers(g);
-      g.phase = 'ended'; g.turnIdx = -1; g.roll = null; g.nextAt = 0;
+      g.phase = 'ended'; g.turnIdx = -1; g.roll = null; g.awaitRoll = false; g.nextAt = 0;
       const ranked = g.seats.slice().sort((a, b) => b.money - a.money || b.notes.length - a.notes.length);
       const best = ranked[0];
       const winners = abort ? [] : ranked.filter((s) => s.money === best.money && s.notes.length === best.notes.length);
@@ -294,7 +306,8 @@ module.exports = {
         phase: g.phase, round: g.round, rounds: CFG.ROUNDS,
         startId: g.startIdx >= 0 ? g.seats[g.startIdx].id : null,
         turnId: g.phase === 'play' && g.turnIdx >= 0 ? g.seats[g.turnIdx].id : null,
-        endsAt: g.phase === 'play' && g.roll && g.roll.open && g.turnEnds ? g.turnEnds : g.phase === 'roundEnd' ? g.nextAt : 0,
+        awaitRoll: g.phase === 'play' && !!g.awaitRoll,
+        endsAt: g.phase === 'play' && g.turnEnds && (g.awaitRoll || (g.roll && g.roll.open)) ? g.turnEnds : g.phase === 'roundEnd' ? g.nextAt : 0,
         minPot: CFG.MIN_POT, white: whitePer(active(g).length) > 0,
         casinos: g.casinos.map((c) => ({ n: c.n, notes: c.notes.slice(), total: c.notes.reduce((a, b) => a + b, 0), dice: Object.entries(c.dice).filter(([, v]) => v > 0).map(([id, count]) => ({ id, count })), neutral: c.neutral })),
         // 자리 정보에는 이름과 차례만 있어요. 다른 사람의 돈과 남은 주사위 수는 보내지 않아요.
@@ -307,7 +320,7 @@ module.exports = {
         nextReady: [...g.nextReady],
         result: g.phase === 'ended' ? g.result : null,
         log: g.log.slice(-60), last: g.lastEvent,
-        me: me ? { myTurn, choices: myTurn ? choicesOf(g) : [], own: me.own, white: me.white, money: me.money, notes: me.notes.length } : null,
+        me: me ? { myTurn, canRoll: !!(g.phase === 'play' && g.awaitRoll && g.seats[g.turnIdx] === me), choices: myTurn ? choicesOf(g) : [], own: me.own, white: me.white, money: me.money, notes: me.notes.length } : null,
       };
     }
 
@@ -317,7 +330,14 @@ module.exports = {
       if (!g) return { ok: false, error: '진행 중인 게임이 아니에요.' };
       const s = seatOf(g, player.id);
       if (!s || s.left) return { ok: false, error: '이번 판 참가자가 아니에요.' };
+      if (msg.type === 'roll') {
+        if (g.phase !== 'play' || !g.awaitRoll) return { ok: false, error: '지금은 주사위를 굴릴 수 없어요.' };
+        if (g.seats[g.turnIdx] !== s) return { ok: false, error: `지금은 ${g.seats[g.turnIdx].name}님의 차례예요.` };
+        doRoll(room, s, 'manual');
+        return { ok: true };
+      }
       if (msg.type === 'place') {
+        if (g.phase === 'play' && g.awaitRoll) return { ok: false, error: '먼저 ‘굴리기’ 버튼으로 주사위를 굴려 주세요.' };
         if (g.phase !== 'play' || !g.roll) return { ok: false, error: '지금은 주사위를 놓을 수 없어요.' };
         if (g.seats[g.roll.idx] !== s) return { ok: false, error: `지금은 ${g.seats[g.roll.idx].name}님의 차례예요.` };
         if (!g.roll.open) return { ok: false, error: '주사위가 굴러가는 중이에요. 잠깐만 기다려 주세요.' };
@@ -341,12 +361,12 @@ module.exports = {
       if (!g || g.phase === 'ended') return;
       const s = seatOf(g, player.id);
       if (!s || s.left) return;
-      const wasTurn = g.phase === 'play' && g.roll && g.seats[g.roll.idx] === s;
+      const wasTurn = g.phase === 'play' && g.seats[g.turnIdx] === s;
       s.left = true; s.own = 0; s.white = 0;
       pub(room, `🚪 ${s.name}님이 떠났어요. 놓지 않은 주사위는 사라져요.`);
       if (active(g).length < CFG.MIN) return finish(room, true);
       if (g.phase === 'roundEnd') { g.nextReady.delete(s.id); if (active(g).every((x) => g.nextReady.has(x.id))) nextRound(room); return; }
-      if (g.phase === 'play' && wasTurn) { clearTimers(g); g.roll = null; startTurn(room, (g.turnIdx + 1) % g.seats.length); }
+      if (g.phase === 'play' && wasTurn) { clearTimers(g); g.roll = null; g.awaitRoll = false; startTurn(room, (g.turnIdx + 1) % g.seats.length); }
       else if (g.phase === 'play' && nextWithDice(g, 0) < 0) payout(room);
     }
 
