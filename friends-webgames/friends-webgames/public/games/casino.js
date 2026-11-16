@@ -45,6 +45,8 @@
   .cz-choice b { font-size: 14px; display: block; line-height: 1.25; }
   .cz-choice span { font-size: 11.5px; color: var(--dim); }
   .cz-choice[disabled] { cursor: default; opacity: .7; }
+  .cz-rollbtn { margin-top: 12px; font-size: 18px; padding: 16px; animation: czPulse 1.3s ease-in-out infinite; }
+  @keyframes czPulse { 0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 55%, transparent); } 50% { box-shadow: 0 0 0 9px color-mix(in srgb, var(--accent) 0%, transparent); } }
   /* 모두의 마블처럼: 누군가 주사위를 굴리면 모두에게 큰 주사위가 굴러가는 장면이 나와요 */
   .cz-stage { position: fixed; inset: 0; z-index: 70; display: flex; align-items: center; justify-content: center; background: rgba(5, 8, 15, .66); backdrop-filter: blur(2px); pointer-events: none; animation: czFade .2s ease-out; }
   .cz-stage[hidden] { display: none; }
@@ -158,7 +160,7 @@
 
   function renderHead() {
     const { S, G } = cur;
-    const sig = JSON.stringify([G.round, G.phase, G.startId, G.turnId, G.white, G.seats.length]);
+    const sig = JSON.stringify([G.round, G.phase, G.startId, G.turnId, G.white, G.seats.length, G.awaitRoll]);
     if (sig === sigHead) return;
     sigHead = sig;
     const start = seatById(G.startId);
@@ -166,7 +168,7 @@
     if (start) tags.unshift(`<span class="cz-tag">🚩 시작 ${esc(start.name)}</span>`);
     if (G.white) tags.push('<span class="cz-tag hot">⚪ 흰색 주사위 포함</span>');
     const turn = seatById(G.turnId);
-    const state = G.phase === 'play' && turn ? `👉 ${col(turn)}님 차례` : G.phase === 'roundEnd' ? '💰 정산 중' : G.phase === 'ended' ? '🏆 게임 끝' : '';
+    const state = G.phase === 'play' && turn ? `👉 ${col(turn)}님 차례${G.awaitRoll ? ' · 주사위를 굴려요' : ''}` : G.phase === 'roundEnd' ? '💰 정산 중' : G.phase === 'ended' ? '🏆 게임 끝' : '';
     $('#cz-head').innerHTML = `<div class="cz-hrow"><div class="t"><small>ROUND ${Math.min(G.round, G.rounds)} / ${G.rounds}</small>${state}</div><span class="cz-timer" id="cz-timer"></span></div><div class="cz-tags">${tags.join('')}</div>`;
   }
 
@@ -288,10 +290,18 @@
     const el = $('#cz-roll');
     const me = G.me;
     const mineRoll = !!(G.phase === 'play' && G.roll && G.roll.seatId === S.you);
-    const sig = JSON.stringify([G.phase, G.roll, me && me.choices, mineRoll]);
+    const sig = JSON.stringify([G.phase, G.roll, me && me.choices, mineRoll, G.awaitRoll, me && me.canRoll, me && me.own + me.white]);
     if (sig === sigRoll) return;
     sigRoll = sig;
-    if (el.classList && el.classList.toggle) el.classList.toggle('mine', !!(me && me.myTurn));
+    if (el.classList && el.classList.toggle) el.classList.toggle('mine', !!(me && (me.myTurn || me.canRoll)));
+    // 차례가 되면 주사위는 저절로 굴러가지 않고, 차례인 사람이 ‘굴리기’ 버튼을 눌러야 해요
+    if (G.phase === 'play' && G.awaitRoll) {
+      if (!(me && me.canRoll)) { el.hidden = true; return; }
+      el.hidden = false;
+      el.innerHTML = `<div class="eyebrow"><span>YOUR TURN</span><b>PRESS ROLL</b></div><b>🎲 내 차례예요! 굴리기 버튼을 눌러요</b><button class="btn primary big cz-rollbtn" id="cz-rollbtn">🎲 굴리기 (남은 주사위 ${me.own + me.white}개)</button><div class="hint" style="margin:8px 0 0">30초 안에 누르지 않으면 자동으로 굴러가요.</div>`;
+      $('#cz-rollbtn').onclick = async () => { const r = await ctx.act('roll'); if (r && !r.ok) ctx.toast(r.error); };
+      return;
+    }
     if (!mineRoll) { el.hidden = true; return; }
     el.hidden = false;
     const roller = seatById(G.roll.seatId);
