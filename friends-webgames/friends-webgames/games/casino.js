@@ -16,6 +16,8 @@ const CFG = {
   ROUNDS: 4,
   OWN_DICE: 8,                 // 한 사람이 가진 주사위
   MIN_POT: 50000,              // 카지노마다 이 금액 이상이 될 때까지 돈 카드를 놓아요
+  get ROLL_MS() { return Number(process.env.CASINO_ROLL_MS) || 1800; },   // 주사위가 굴러가는 장면을 보여 주는 시간 (이 동안은 고를 수 없어요)
+  AUTO_HOLD_MS: 1200,          // 고를 눈이 하나뿐일 때: 결과를 보여 준 뒤 자동으로 놓을 때까지
   TURN_MS: 45 * 1000,          // 숫자를 고르는 제한 시간 (넘으면 가장 많은 쪽으로 자동 선택)
   NEXT_MS: 15 * 1000,          // 정산을 보고 다음 라운드로 넘어가기까지 (모두 누르면 바로)
   SCORE_WIN: 1,                // 우승하면 방 점수판에 더해지는 점수
@@ -41,7 +43,7 @@ const HELP = {
       '모두 자기 색 주사위 8개를 들고 시작해요. 내 차례가 되면 **남은 주사위를 전부** 굴려요.',
       '굴린 눈 중 **한 숫자를 골라**, 그 눈이 나온 주사위를 **전부** 같은 번호 카지노에 놓아요. 일부만 놓을 수는 없어요.',
       '남은 주사위는 다음 내 차례에 다시 굴려요. 주사위를 다 놓은 사람은 건너뛰고, **모두 다 놓을 때까지** 돌아요.',
-      '내 차례는 45초예요. 시간이 지나면 가장 많이 나온 눈으로 자동으로 놓아요.',
+      '내 차례에는 주사위가 굴러가는 장면이 먼저 나와요. 그 뒤 45초 안에 고르고, 시간이 지나면 가장 많이 나온 눈으로 자동으로 놓아요.',
     ] },
     { title: '정산 (라운드가 끝났을 때)', lines: [
       '카지노마다 먼저 **같은 개수의 주사위를 놓은 사람들**을 찾아요. 그 사람들의 주사위는 **모두 빠지고** 돈을 못 받아요.',
@@ -58,6 +60,7 @@ const HELP = {
     { title: '승리', lines: [
       '4라운드가 끝났을 때 **돈이 가장 많은 사람**이 우승해요. 같으면 돈 카드가 더 많은 사람이 이기고, 그래도 같으면 공동 우승이에요.',
       '우승하면 방 점수판에 1점을 받아요. (공동 우승이면 모두 1점)',
+      '게임 중에는 **내 남은 주사위와 지금까지 번 돈**만 보여요. 다른 사람의 돈은 숨겨져 있고, **순위는 라운드가 끝날 때만** 아래 `순위` 탭에 공개돼요.',
     ] },
   ],
   groups: [
@@ -170,11 +173,21 @@ module.exports = {
       if (idx < 0) return payout(room);
       const s = g.seats[idx];
       g.turnIdx = idx;
-      g.roll = { idx, dice: rollDice(g, s), seq: (g.roll ? g.roll.seq : 0) + 1 };
+      g.rollSeq = (g.rollSeq || 0) + 1;
+      const seq = g.rollSeq;
+      const now = Date.now();
+      g.roll = { idx, dice: rollDice(g, s), seq, startedAt: now, openAt: now + CFG.ROLL_MS, open: false };
+      g.turnEnds = 0;
       const values = [...new Set(g.roll.dice.map((d) => d.v))];
-      if (values.length === 1) { place(room, s, values[0], 'only'); return; }       // 고를 게 하나뿐이면 자동으로 놓아요
-      g.turnEnds = Date.now() + CFG.TURN_MS;
-      later(g, CFG.TURN_MS, () => autoPlace(room));
+      // 주사위가 굴러가는 장면이 끝나면 고를 수 있어요 (그때부터 제한 시간이 흘러요)
+      later(g, CFG.ROLL_MS, () => {
+        if (!g.roll || g.roll.seq !== seq) return;
+        g.roll.open = true;
+        if (values.length > 1) g.turnEnds = Date.now() + CFG.TURN_MS;
+        api.broadcast(room);
+      });
+      if (values.length === 1) later(g, CFG.ROLL_MS + CFG.AUTO_HOLD_MS, () => { if (g.roll && g.roll.seq === seq && g.phase === 'play') place(room, s, values[0], 'only'); });   // 고를 눈이 하나뿐이면 자동으로 놓아요
+      else later(g, CFG.ROLL_MS + CFG.TURN_MS, () => { if (g.roll && g.roll.seq === seq) autoPlace(room); });
       api.broadcast(room);
     }
     function choicesOf(g) {
@@ -235,9 +248,13 @@ module.exports = {
         result.push({ n: c.n, notes, rows: entries.sort((a, b) => b.count - a.count), leftover });
       });
       g.payout = result;
+      const roundGain = (s) => result.reduce((a, c) => a + ((c.rows.find((r) => r.who === s.id && r.won !== null) || { won: 0 }).won), 0);
+      const ranked = g.seats.slice().sort((a, b) => b.money - a.money || b.notes.length - a.notes.length);
+      let rk = 0;
+      g.standings = ranked.map((s, i) => { if (i === 0 || s.money !== ranked[i - 1].money || s.notes.length !== ranked[i - 1].notes.length) rk = i + 1; return { id: s.id, name: s.name, avatar: s.avatar, color: s.color, money: s.money, notes: s.notes.length, gain: roundGain(s), rank: rk, left: s.left }; });
+      g.standingsRound = g.round;
       const gained = g.seats.map((s) => `${s.name} ${money(result.reduce((a, c) => a + (c.rows.find((r) => r.who === s.id && r.won !== null) || { won: 0 }).won, 0))}`);
       pub(room, `💰 ${g.round}라운드 정산! ${gained.join(' · ')}`);
-      const roundGain = (s) => result.reduce((a, c) => a + ((c.rows.find((r) => r.who === s.id && r.won !== null) || { won: 0 }).won), 0);
       const top = g.seats.slice().sort((a, b) => roundGain(b) - roundGain(a))[0];
       setEvent(g, { tone: 'good', icon: '💰', headline: `${g.round}라운드 정산`, detail: roundGain(top) > 0 ? `이번 라운드는 ${top.name}님이 ${money(roundGain(top))}로 가장 많이 벌었어요` : '이번 라운드는 아무도 돈을 못 벌었어요', auto: false });
       if (g.round >= CFG.ROUNDS) return finish(room);
@@ -272,23 +289,25 @@ module.exports = {
     function view(room, pid) {
       const g = room.g;
       const me = seatOf(g, pid);
-      const myTurn = !!(me && g.phase === 'play' && g.roll && g.seats[g.roll.idx] === me);
+      const myTurn = !!(me && g.phase === 'play' && g.roll && g.roll.open && g.seats[g.roll.idx] === me);
       return {
         phase: g.phase, round: g.round, rounds: CFG.ROUNDS,
         startId: g.startIdx >= 0 ? g.seats[g.startIdx].id : null,
         turnId: g.phase === 'play' && g.turnIdx >= 0 ? g.seats[g.turnIdx].id : null,
-        endsAt: g.phase === 'play' && g.roll ? g.turnEnds : g.phase === 'roundEnd' ? g.nextAt : 0,
+        endsAt: g.phase === 'play' && g.roll && g.roll.open && g.turnEnds ? g.turnEnds : g.phase === 'roundEnd' ? g.nextAt : 0,
         minPot: CFG.MIN_POT, white: whitePer(active(g).length) > 0,
         casinos: g.casinos.map((c) => ({ n: c.n, notes: c.notes.slice(), total: c.notes.reduce((a, b) => a + b, 0), dice: Object.entries(c.dice).filter(([, v]) => v > 0).map(([id, count]) => ({ id, count })), neutral: c.neutral })),
-        seats: g.seats.map((s, i) => ({ id: s.id, name: s.name, avatar: s.avatar, color: s.color, left: s.left, own: s.own, white: s.white, money: s.money, noteCount: s.notes.length, turn: g.phase === 'play' && i === g.turnIdx })),
-        roll: g.roll ? { seatId: g.seats[g.roll.idx].id, seq: g.roll.seq, dice: g.roll.dice.map((d) => ({ k: d.k, v: d.v })) } : null,
+        // 자리 정보에는 이름과 차례만 있어요. 다른 사람의 돈과 남은 주사위 수는 보내지 않아요.
+        seats: g.seats.map((s, i) => ({ id: s.id, name: s.name, avatar: s.avatar, color: s.color, left: s.left, turn: g.phase === 'play' && i === g.turnIdx })),
+        roll: g.roll ? { seatId: g.seats[g.roll.idx].id, seq: g.roll.seq, startedAt: g.roll.startedAt, openAt: g.roll.openAt, open: g.roll.open, dice: g.roll.dice.map((d) => ({ k: d.k, v: d.v })) } : null,
         lastRoll: g.lastRoll ? { seatId: g.seats[g.lastRoll.idx].id, dice: g.lastRoll.dice, pick: g.lastRoll.pick } : null,
         deckCount: g.deck.length,
         payout: g.phase === 'roundEnd' || g.phase === 'ended' ? g.payout : null,
+        standings: g.standings || null, standingsRound: g.standingsRound || 0,   // 순위는 라운드가 끝날 때만 갱신돼요
         nextReady: [...g.nextReady],
         result: g.phase === 'ended' ? g.result : null,
         log: g.log.slice(-60), last: g.lastEvent,
-        me: me ? { myTurn, choices: myTurn ? choicesOf(g) : [], money: me.money } : null,
+        me: me ? { myTurn, choices: myTurn ? choicesOf(g) : [], own: me.own, white: me.white, money: me.money, notes: me.notes.length } : null,
       };
     }
 
@@ -301,6 +320,7 @@ module.exports = {
       if (msg.type === 'place') {
         if (g.phase !== 'play' || !g.roll) return { ok: false, error: '지금은 주사위를 놓을 수 없어요.' };
         if (g.seats[g.roll.idx] !== s) return { ok: false, error: `지금은 ${g.seats[g.roll.idx].name}님의 차례예요.` };
+        if (!g.roll.open) return { ok: false, error: '주사위가 굴러가는 중이에요. 잠깐만 기다려 주세요.' };
         const n = Number(msg.n);
         if (!g.roll.dice.some((d) => d.v === n)) return { ok: false, error: '굴리지 않은 숫자예요. 나온 눈 중에서 골라 주세요.' };
         clearTimers(g);
