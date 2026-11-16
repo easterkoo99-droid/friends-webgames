@@ -29,6 +29,7 @@ const CFG = {
   get FORCE() { try { return process.env.CASINO_FORCE ? JSON.parse(process.env.CASINO_FORCE) : null; } catch (e) { return null; } },
 };
 
+const VERSION = 4;   // 서버 파일과 화면 파일의 짝을 맞추는 번호예요. 둘 중 하나만 올리면 화면에 ‘새로고침’ 안내가 떠요
 const money = (v) => `$${v.toLocaleString('en-US')}`;
 const whitePer = (n) => (n === 2 ? 4 : n === 3 || n === 4 ? 2 : 0);   // 2~4명: 흰색 주사위를 나눠 가져요 (합쳐서 8개 = 가상의 한 사람)
 
@@ -303,6 +304,7 @@ module.exports = {
       const me = seatOf(g, pid);
       const myTurn = !!(me && g.phase === 'play' && g.roll && g.roll.open && g.seats[g.roll.idx] === me);
       return {
+        ver: VERSION,                 // 화면 파일(public/games/casino.js)의 VER 과 같아야 해요
         phase: g.phase, round: g.round, rounds: CFG.ROUNDS,
         startId: g.startIdx >= 0 ? g.seats[g.startIdx].id : null,
         turnId: g.phase === 'play' && g.turnIdx >= 0 ? g.seats[g.turnIdx].id : null,
