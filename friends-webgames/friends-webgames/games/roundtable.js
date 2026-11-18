@@ -6,11 +6,11 @@
  *  - 선 3명(예언자·수호자·충신) vs 악 2명(위장자·암살자). 원정(임무)은 5번, 팀 인원은 2·3·2·3·3명이에요.
  *  - 임무 3번 성공 → 선이 이기지만, 암살자가 예언자를 맞히면 악이 역전승해요.
  *  - 임무 3번 실패, 또는 팀 투표가 연달아 5번 부결되면 악이 바로 이겨요.
- * 시간 제한은 아래 CFG 에서 고칠 수 있어요. (모든 단계 3분, 다 끝내면 바로 넘어가요)
+ * 제한 시간은 없어요. 모두가 끝내면 바로 다음 단계로 넘어가요. (투표·카드 공개 연출만 5~6초)
  */
 const { shuffle } = require('./util');
 
-const VERSION = 3;   // 서버 파일과 화면 파일의 짝을 맞추는 번호예요
+const VERSION = 4;   // 서버 파일과 화면 파일의 짝을 맞추는 번호예요
 
 const CFG = {
   MIN: 5,
@@ -28,7 +28,6 @@ const CFG = {
   twoFailFrom: 7,
   WIN: 3,                         // 먼저 이 수만큼 성공/실패하면 끝
   MAX_REJECT: 5,                  // 연속 부결 한도
-  get PHASE_MS() { const n = Number(process.env.ROUNDTABLE_MS); return n > 0 ? n : 3 * 60 * 1000; },   // 모든 단계 제한 시간 (기본 3분)
   get REVEAL_MS() { const n = Number(process.env.ROUNDTABLE_REVEAL_MS); return n >= 0 && process.env.ROUNDTABLE_REVEAL_MS !== undefined && process.env.ROUNDTABLE_REVEAL_MS !== '' ? n : 5000; },   // 투표 공개 연출 시간
   get CARD_REVEAL_MS() { const n = Number(process.env.ROUNDTABLE_REVEAL_MS); return n >= 0 && process.env.ROUNDTABLE_REVEAL_MS !== undefined && process.env.ROUNDTABLE_REVEAL_MS !== '' ? n : 6500; },   // 원정 카드 공개 연출 시간
   skipNeed(n) { return Math.floor(n / 2) + 1; },   // 과반이 스킵을 누르면 토론/팀 구성이 바로 넘어가요
@@ -80,10 +79,10 @@ const HELP = {
       '9명: 충신 +1, 밀정 대신 **그림자** (예언자에게 안 보여요)',
       '10명: 외톨이 밀정 추가',
     ] },
-    { title: '시간과 자동 진행', lines: [
-      '모든 단계의 제한 시간은 **3분**이에요. 다들 끝내면 바로 다음 단계로 넘어가요. (투표 공개와 원정 카드 공개 연출은 5~6초 보여줘요)',
-      '팀 구성 시간이 지나거나 과반이 `스킵`하면 팀이 **자동으로** 구성돼요. 토론은 3분이 지나거나 과반이 스킵하면 투표로 넘어가요.',
-      '투표를 안 하면 **찬성**, 임무 카드를 안 내면 **성공**으로 처리돼요. 암살자가 시간 안에 못 고르면 암살은 실패해요.',
+    { title: '진행과 스킵', lines: [
+      '**제한 시간은 없어요.** 모두가 끝내면 바로 다음 단계로 넘어가요. (투표 공개와 원정 카드 공개 연출만 5~6초 보여줘요)',
+      '대장이 팀을 안 골라 주면 **과반이 화면 위의 `스킵`**을 눌러 팀을 자동으로 구성할 수 있어요. 토론도 과반이 `스킵`하면 바로 투표로 넘어가요.',
+      '투표는 **전원이 고를 때까지**, 임무 카드는 **원정대원 전원이 낼 때까지** 기다려요.',
       '게임 중에 한 명이라도 나가면 게임이 중단돼요. (점수 없음)',
     ] },
   ],
@@ -104,7 +103,7 @@ module.exports = {
     '대장이 팀을 고르고 전원이 공개 투표로 승인해요. 연달아 5번 부결되면 악이 이겨요.',
     '승인된 팀원만 비밀 카드를 내요. 실패 카드가 나오면 원정 실패예요. (7명 이상은 4번 원정만 2장)',
     '선이 3번 성공해도 암살자가 예언자를 맞히면 악이 역전승해요.',
-    '모든 단계는 3분 제한이고, 다들 끝내면 바로 넘어가요.',
+    '제한 시간은 없고, 다들 끝내면 바로 넘어가요. 늦는 사람이 있으면 과반 스킵으로 토론/팀 구성을 넘길 수 있어요.',
   ],
   min: CFG.MIN,
   max: CFG.MAX,
@@ -154,8 +153,7 @@ module.exports = {
       g.phase = 'team';
       g.team = [];
       g.seats.forEach((s) => { s.vote = null; s.card = null; s.skip = false; });
-      g.endsAt = Date.now() + CFG.PHASE_MS;
-      later(g, CFG.PHASE_MS, () => autoTeam(room));
+      g.endsAt = 0;   // 제한 시간 없음
       setLast(g, `👑 ${leaderSeat(g).name}님이 ${g.quests[g.round - 1].size}명의 원정대를 골라요.`);
       api.broadcast(room);
     }
@@ -165,7 +163,7 @@ module.exports = {
       if (!g || g.phase !== 'team') return;
       const size = g.quests[g.round - 1].size;
       const ids = [leaderSeat(g).id].concat(shuffle(g.seats.filter((s) => s !== leaderSeat(g)).map((s) => s.id))).slice(0, size);
-      pub(g, '⏰ 팀 구성 시간이 끝나 자동으로 팀이 정해졌어요.');
+      pub(g, '⏭️ 스킵 과반으로 팀이 자동 구성됐어요.');
       setTeam(room, ids);
     }
 
@@ -175,8 +173,7 @@ module.exports = {
       g.team = ids.slice();
       g.phase = 'talk';
       g.seats.forEach((s) => { s.skip = false; });
-      g.endsAt = Date.now() + CFG.PHASE_MS;
-      later(g, CFG.PHASE_MS, () => beginVote(room));
+      g.endsAt = 0;   // 제한 시간 없음
       setLast(g, `📋 원정대: ${ids.map((id) => seatOf(g, id).name).join(', ')} — 토론해 보세요.`);
       pub(g, `📋 ${g.round}번 원정 (제안 ${g.rejects + 1}회) 대장 ${leaderSeat(g).name}: ${ids.map((id) => seatOf(g, id).name).join(', ')}`);
       api.broadcast(room);
@@ -188,8 +185,7 @@ module.exports = {
       clearTimers(g);
       g.phase = 'vote';
       g.seats.forEach((s) => { s.vote = null; });
-      g.endsAt = Date.now() + CFG.PHASE_MS;
-      later(g, CFG.PHASE_MS, () => resolveVote(room));
+      g.endsAt = 0;   // 제한 시간 없음
       setLast(g, '🗳️ 이 팀을 승인할까요? 전원이 고르면 한꺼번에 공개돼요.');
       api.broadcast(room);
     }
@@ -212,8 +208,7 @@ module.exports = {
         later(g, CFG.REVEAL_MS, () => {
           g.phase = 'mission';
           g.seats.forEach((s) => { s.card = null; });
-          g.endsAt = Date.now() + CFG.PHASE_MS;
-          later(g, CFG.PHASE_MS, () => resolveMission(room));
+          g.endsAt = 0;   // 제한 시간 없음
           api.broadcast(room);
         });
         return api.broadcast(room);
@@ -264,8 +259,7 @@ module.exports = {
       const g = room.g;
       clearTimers(g);
       g.phase = 'assassin';
-      g.endsAt = Date.now() + CFG.PHASE_MS;
-      later(g, CFG.PHASE_MS, () => resolveAssassin(room, null));
+      g.endsAt = 0;   // 제한 시간 없음
       setLast(g, '🗡️ 선이 3번 성공했어요! 하지만 암살자가 예언자를 맞히면 악의 역전승!');
       pub(g, '🗡️ 암살 단계: 암살자가 예언자를 지목해요.');
       api.broadcast(room);
