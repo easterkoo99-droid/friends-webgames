@@ -7,7 +7,7 @@
 (() => {
   'use strict';
   window.GAME_UI = window.GAME_UI || {};
-  const VER = 2;   // 서버 파일(games/roundtable.js)의 VERSION 과 같아야 해요. 다르면 화면에 안내가 떠요
+  const VER = 3;   // 서버 파일(games/roundtable.js)의 VERSION 과 같아야 해요. 다르면 화면에 안내가 떠요
   const $ = (s) => document.querySelector(s);
 
   const CSS = `
@@ -73,6 +73,13 @@
   @keyframes rtCard { 0% { transform: rotateY(0) translateY(0); } 40% { transform: rotateY(0) translateY(-10px); } 100% { transform: rotateY(180deg) translateY(0); } }
   .rt-late { opacity: 0; animation: rtLate .5s ease-out forwards; animation-delay: var(--d, 1s); }
   @keyframes rtLate { from { opacity: 0; transform: scale(.7); } to { opacity: 1; transform: none; } }
+  .rt-table.n7, .rt-table.n8 { height: 390px; } .rt-table.n9, .rt-table.n10 { height: 440px; }
+  .rt-table.n8 .rt-s .av, .rt-table.n9 .rt-s .av, .rt-table.n10 .rt-s .av { width: 44px; height: 44px; font-size: 23px; }
+  .rt-table.n9 .rt-s, .rt-table.n10 .rt-s, .rt-table.n8 .rt-s { width: 66px; }
+  .rt-table.n9 .rt-s .nm, .rt-table.n10 .rt-s .nm, .rt-table.n8 .rt-s .nm { max-width: 66px; font-size: 11.5px; }
+  .rt-table.n9 .rt-s .st, .rt-table.n10 .rt-s .st, .rt-table.n8 .rt-s .st { font-size: 10px; }
+  .rt-cards.many .rt-card { width: 30px; height: 44px; } .rt-cards.many { gap: 5px; }
+  .rt-qhint { font-size: 11.5px; color: var(--dim); margin-top: 6px; text-align: center; }
   .rt-cap { text-align: center; font-size: 13px; color: var(--dim); min-height: 18px; margin-top: -2px; line-height: 1.4; padding: 0 6px; }
   /* 탭: 토론 / 기록 */
   .rt-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
@@ -163,9 +170,10 @@
   function renderTop() {
     const { G } = cur;
     if (!changed('top', [G.round, G.phase, G.rejects, G.quests])) return;
-    const q = G.quests.map((x, i) => `<div class="rt-q${x.result ? ` ${x.result}` : ''}${i + 1 === G.round && G.phase !== 'ended' && !x.result ? ' cur' : ''}"><span>${i + 1}번 원정</span><b>${x.result === 'success' ? '✔' : x.result === 'fail' ? '✖' : x.size}</b><span>${x.result === 'fail' ? `실패 ${x.fails}장` : x.result === 'success' ? '성공' : `${x.size}명`}</span></div>`).join('');
+    const q = G.quests.map((x, i) => `<div class="rt-q${x.result ? ` ${x.result}` : ''}${i + 1 === G.round && G.phase !== 'ended' && !x.result ? ' cur' : ''}"><span>${i + 1}번 원정</span><b>${x.result === 'success' ? '✔' : x.result === 'fail' ? '✖' : x.size}</b><span>${x.result === 'fail' ? `실패 ${x.fails}장` : x.result === 'success' ? (x.fails ? `성공(실패${x.fails})` : '성공') : `${x.size}명${x.need > 1 ? ' ⚠️2' : ''}`}</span></div>`).join('');
+    const hint = G.quests.some((x) => x.need > 1) ? '<div class="rt-qhint">⚠️2 = 이 원정은 실패 카드 <b>2장</b>이 나와야 실패예요</div>' : '';
     const dots = Array.from({ length: G.maxReject }, (_, i) => `<span class="rt-dot${i < G.rejects ? ' on' : ''}"></span>`).join('');
-    $('#rt-top').innerHTML = `<div class="rt-trow"><span class="ph">${PHASE[G.phase] || ''}</span><span class="rt-rej" title="연속 부결">부결 ${dots}</span></div><div class="rt-track">${q}</div>`;
+    $('#rt-top').innerHTML = `<div class="rt-trow"><span class="ph">${PHASE[G.phase] || ''}</span><span class="rt-rej" title="연속 부결">부결 ${dots}</span></div><div class="rt-track">${q}</div>${hint}`;
   }
 
   /* ───── 내 역할 ───── */
@@ -205,15 +213,20 @@
     if (G.phase === 'talk') return `<div class="big">💬 토론</div><div class="sub">⚔️ 표시된 사람이 원정대예요<br>스킵 ${live.filter((s) => s.skip).length}/${G.skipNeed}</div>`;
     if (G.phase === 'vote') return `<div class="big">🗳️ 이 팀 OK?</div><div class="sub">투표 ${live.filter((s) => s.voted).length}/${live.length}<br>전원이 고르면 한꺼번에 공개!</div>`;
     if (G.phase === 'voteReveal' && h) {
-      const d = live.length * 0.45 + 0.4;
+      const step = live.length > 6 ? 0.3 : 0.45;
+      const d = live.length * step + 0.4;
       return `<div class="big rt-late ${h.approved ? 'good' : 'bad'}" style="--d:${d}s">${h.approved ? '✅ 승인!' : '❌ 부결!'}</div><div class="sub rt-late" style="--d:${d + 0.2}s">찬성 ${h.yes} : 반대 ${h.no}${h.approved ? '<br>원정 출발!' : `<br>연속 부결 ${G.rejects}/${G.maxReject}`}</div>`;
     }
     if (G.phase === 'mission') return `<div class="big">⚔️ 원정 중</div><div class="sub">원정대가 비밀 카드를 내는 중<br>제출 ${G.team.filter((id) => { const s = seatById(id); return s && s.carded; }).length}/${G.team.length}</div>`;
     if (G.phase === 'missionReveal' && G.reveal) {
       const n = G.reveal.cards.length;
-      const cards = G.reveal.cards.map((c, i) => `<div class="rt-card" style="--d:${0.4 + i * 0.9}s"><div class="b">?</div><div class="f ${c === 'fail' ? 'x' : 's'}">${c === 'fail' ? '✖' : '✔'}</div></div>`).join('');
-      const d = 0.4 + n * 0.9 + 0.5;
-      return `<div class="rt-cards">${cards}</div><div class="big rt-late ${G.reveal.fails ? 'bad' : 'good'}" style="--d:${d}s">${G.reveal.fails ? `💥 실패 ${G.reveal.fails}장` : '🌟 성공!'}</div>`;
+      const stp = n > 3 ? 0.7 : 0.9;
+      const cards = G.reveal.cards.map((c, i) => `<div class="rt-card" style="--d:${0.4 + i * stp}s"><div class="b">?</div><div class="f ${c === 'fail' ? 'x' : 's'}">${c === 'fail' ? '✖' : '✔'}</div></div>`).join('');
+      const d = 0.4 + n * stp + 0.5;
+      const R = G.reveal;
+      const txt = !R.ok ? `💥 실패 ${R.fails}장` : R.fails ? `🌟 성공!` : '🌟 성공!';
+      const sub = R.ok && R.fails ? `<div class="sub rt-late" style="--d:${d + 0.2}s">실패 카드 ${R.fails}장이 나왔지만<br>이 원정은 ${R.need}장이 필요해요</div>` : '';
+      return `<div class="rt-cards${n > 3 ? ' many' : ''}">${cards}</div><div class="big rt-late ${R.ok ? 'good' : 'bad'}" style="--d:${d}s">${txt}</div>${sub}`;
     }
     if (G.phase === 'assassin') return `<div class="big">🗡️ 암살 단계</div><div class="sub">선이 3번 성공!<br>암살자가 예언자를 노려요</div>`;
     if (G.phase === 'ended' && G.result) {
@@ -232,6 +245,7 @@
     if (!changed('table', state)) return;
     const el = $('#rt-table');
     const n = G.seats.length;
+    el.className = `rt-table n${n}`;
     const meIdx = Math.max(0, G.seats.findIndex((s) => S && s.id === S.you));
     const tapOk = selectable();
     const roleOf = {};
@@ -251,7 +265,7 @@
       if (isTeam) bd += '<i class="bd t">⚔️</i>';
       if (peekIds.includes(s.id)) bd += `<i class="bd k">${G.me.role === 'percival' ? '❓' : '😈'}</i>`;
       let vt = '';
-      if (showVotes && h.votes[s.id]) { const k = Object.keys(h.votes).indexOf(s.id); vt = `<div class="vt ${h.votes[s.id] === 'yes' ? 'y' : 'n'}" style="--d:${k * 0.45}s">${h.votes[s.id] === 'yes' ? '👍' : '👎'}</div>`; }
+      if (showVotes && h.votes[s.id]) { const k = Object.keys(h.votes).indexOf(s.id); vt = `<div class="vt ${h.votes[s.id] === 'yes' ? 'y' : 'n'}" style="--d:${k * (n > 6 ? 0.3 : 0.45)}s">${h.votes[s.id] === 'yes' ? '👍' : '👎'}</div>`; }
       let role = '';
       if (G.phase === 'ended' && roleOf[s.id]) { const R = G.roles[roleOf[s.id].role]; role = `<div class="role" style="color:${TCOLOR[roleOf[s.id].team]}">${R.emoji} ${esc(R.name)}${G.result.assassinTarget === s.id ? ' 🗡️' : ''}</div>`; }
       return `<div class="rt-s${S && s.id === S.you ? ' me' : ''}${s.left ? ' left' : ''}${isTeam || (G.phase === 'team' && sel) ? ' team' : ''}${sel ? ' sel' : ''}${canTap ? ' tap' : ''}" data-act="seat" data-id="${esc(s.id)}" style="left:${pos.x.toFixed(1)}%;top:${pos.y.toFixed(1)}%"><div class="av" style="--c:${esc(s.color)}">${esc(s.avatar)}${bd}${vt}</div><div class="nm" style="color:${esc(s.color)}">${esc(s.name)}</div>${role || `<div class="st">${st}</div>`}</div>`;
@@ -350,7 +364,7 @@
     const el = $('#rt-hist');
     el.innerHTML = G.history.length ? G.history.slice().reverse().map((h) => {
       const votes = G.seats.map((s) => { const v = h.votes[s.id]; return `<span class="${v === 'yes' ? 'y' : 'n'}${h.team.includes(s.id) ? ' in' : ''}"><i>${v === 'yes' ? '👍' : '👎'}</i>${esc(s.name)}</span>`; }).join('');
-      const res = h.approved ? (h.pending ? '⏳ 공개 대기' : h.fails === null ? '진행 중' : h.fails ? `💥 실패 ${h.fails}장` : '🌟 성공') : '부결';
+      const res = h.approved ? (h.pending ? '⏳ 공개 대기' : h.fails === null ? '진행 중' : h.ok === 'fail' ? `💥 실패 ${h.fails}장` : h.fails ? `🌟 성공 (실패 ${h.fails}장)` : '🌟 성공') : '부결';
       return `<div class="rt-h ${h.approved ? 'ok' : 'no'}"><div class="hh"><span>${h.round}번 원정 · ${h.attempt}번째 제안</span><span class="hr">${h.approved ? '✅ 승인' : '❌ 부결'} ${h.yes}:${h.no}${h.approved ? ` → ${res}` : ''}</span></div><div class="hl">👑 ${col(seatById(h.leader))} · ⚔️ ${h.team.map((id) => col(seatById(id))).join(' ')}</div><div class="rt-hv">${votes}</div></div>`;
     }).join('') : '<div class="rt-empty">아직 기록이 없어요. 투표가 끝나면 누가 어디에 투표했는지 여기 남아요.</div>';
   }
