@@ -6,11 +6,11 @@
  *  - 선 3명(예언자·수호자·충신) vs 악 2명(위장자·암살자). 원정(임무)은 5번, 팀 인원은 2·3·2·3·3명이에요.
  *  - 임무 3번 성공 → 선이 이기지만, 암살자가 예언자를 맞히면 악이 역전승해요.
  *  - 임무 3번 실패, 또는 팀 투표가 연달아 5번 부결되면 악이 바로 이겨요.
- * 제한 시간은 없어요. 모두가 끝내면 바로 다음 단계로 넘어가요. (투표·카드 공개 연출만 5~6초)
+ * 투표에만 5분 제한이 있고(안 고른 사람은 찬성), 나머지는 제한 시간이 없어요. 모두가 끝내면 바로 넘어가요.
  */
 const { shuffle } = require('./util');
 
-const VERSION = 4;   // 서버 파일과 화면 파일의 짝을 맞추는 번호예요
+const VERSION = 5;   // 서버 파일과 화면 파일의 짝을 맞추는 번호예요
 
 const CFG = {
   MIN: 5,
@@ -28,6 +28,7 @@ const CFG = {
   twoFailFrom: 7,
   WIN: 3,                         // 먼저 이 수만큼 성공/실패하면 끝
   MAX_REJECT: 5,                  // 연속 부결 한도
+  get VOTE_MS() { const n = Number(process.env.ROUNDTABLE_VOTE_MS); return n > 0 ? n : 5 * 60 * 1000; },   // 투표 제한 시간 (기본 5분, 안 고른 사람은 찬성)
   get REVEAL_MS() { const n = Number(process.env.ROUNDTABLE_REVEAL_MS); return n >= 0 && process.env.ROUNDTABLE_REVEAL_MS !== undefined && process.env.ROUNDTABLE_REVEAL_MS !== '' ? n : 5000; },   // 투표 공개 연출 시간
   get CARD_REVEAL_MS() { const n = Number(process.env.ROUNDTABLE_REVEAL_MS); return n >= 0 && process.env.ROUNDTABLE_REVEAL_MS !== undefined && process.env.ROUNDTABLE_REVEAL_MS !== '' ? n : 6500; },   // 원정 카드 공개 연출 시간
   skipNeed(n) { return Math.floor(n / 2) + 1; },   // 과반이 스킵을 누르면 토론/팀 구성이 바로 넘어가요
@@ -80,9 +81,9 @@ const HELP = {
       '10명: 외톨이 밀정 추가',
     ] },
     { title: '진행과 스킵', lines: [
-      '**제한 시간은 없어요.** 모두가 끝내면 바로 다음 단계로 넘어가요. (투표 공개와 원정 카드 공개 연출만 5~6초 보여줘요)',
+      '**투표에는 5분 제한**이 있어요. 시간 안에 안 고른 사람은 **찬성**으로 처리돼요. 다른 단계는 제한 시간이 없고, 모두가 끝내면 바로 넘어가요. (투표 공개와 원정 카드 공개 연출은 5~6초)',
       '대장이 팀을 안 골라 주면 **과반이 화면 위의 `스킵`**을 눌러 팀을 자동으로 구성할 수 있어요. 토론도 과반이 `스킵`하면 바로 투표로 넘어가요.',
-      '투표는 **전원이 고를 때까지**, 임무 카드는 **원정대원 전원이 낼 때까지** 기다려요.',
+      '임무 카드는 **원정대원 전원이 낼 때까지** 기다려요.',
       '게임 중에 한 명이라도 나가면 게임이 중단돼요. (점수 없음)',
     ] },
   ],
@@ -103,7 +104,7 @@ module.exports = {
     '대장이 팀을 고르고 전원이 공개 투표로 승인해요. 연달아 5번 부결되면 악이 이겨요.',
     '승인된 팀원만 비밀 카드를 내요. 실패 카드가 나오면 원정 실패예요. (7명 이상은 4번 원정만 2장)',
     '선이 3번 성공해도 암살자가 예언자를 맞히면 악이 역전승해요.',
-    '제한 시간은 없고, 다들 끝내면 바로 넘어가요. 늦는 사람이 있으면 과반 스킵으로 토론/팀 구성을 넘길 수 있어요.',
+    '투표에만 5분 제한이 있고(안 고르면 찬성), 나머지는 다들 끝내면 바로 넘어가요. 늦는 사람이 있으면 과반 스킵으로 토론/팀 구성을 넘길 수 있어요.',
   ],
   min: CFG.MIN,
   max: CFG.MAX,
@@ -185,7 +186,8 @@ module.exports = {
       clearTimers(g);
       g.phase = 'vote';
       g.seats.forEach((s) => { s.vote = null; });
-      g.endsAt = 0;   // 제한 시간 없음
+      g.endsAt = Date.now() + CFG.VOTE_MS;
+      later(g, CFG.VOTE_MS, () => resolveVote(room));
       setLast(g, '🗳️ 이 팀을 승인할까요? 전원이 고르면 한꺼번에 공개돼요.');
       api.broadcast(room);
     }
@@ -314,6 +316,7 @@ module.exports = {
       const size = g.quests[Math.min(g.round, g.quests.length) - 1].size;
       return {
         ver: VERSION,
+        roleCounts: g.seats.reduce((m, x) => { m[x.role] = (m[x.role] || 0) + 1; return m; }, {}),
         phase: g.phase, round: g.round, rejects: g.rejects, maxReject: CFG.MAX_REJECT, skipNeed: CFG.skipNeed(g.seats.length),
         quests: g.quests.map((q, i) => (g.phase === 'missionReveal' && i === g.round - 1 ? { size: q.size, need: q.need, result: null, fails: 0 } : { size: q.size, need: q.need, result: q.result, fails: q.fails })),
         reveal: g.phase === 'missionReveal' ? { cards: g.revealCards.slice(), fails: g.quests[g.round - 1].fails, need: g.quests[g.round - 1].need, ok: g.quests[g.round - 1].result === 'success' } : null,
