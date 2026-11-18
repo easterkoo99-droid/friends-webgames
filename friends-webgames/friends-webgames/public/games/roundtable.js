@@ -7,7 +7,7 @@
 (() => {
   'use strict';
   window.GAME_UI = window.GAME_UI || {};
-  const VER = 4;   // 서버 파일(games/roundtable.js)의 VERSION 과 같아야 해요. 다르면 화면에 안내가 떠요
+  const VER = 5;   // 서버 파일(games/roundtable.js)의 VERSION 과 같아야 해요. 다르면 화면에 안내가 떠요
   const $ = (s) => document.querySelector(s);
 
   const CSS = `
@@ -38,7 +38,7 @@
   .rt-me { border: 2px solid var(--rc, var(--line2)); border-radius: var(--r-lg); background: color-mix(in srgb, var(--rc, #94a3b8) 9%, var(--card-solid)); padding: 0; overflow: hidden; }
   .rt-me .mh { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; padding: 8px 12px 4px; font-size: 14px; font-weight: 800; text-align: left; }
   .rt-me .mh { flex-wrap: wrap; }
-  .rt-me .mh small { min-width: 0; }
+  .rt-me .mh small { flex-basis: 100%; min-width: 0; }
   .rt-me .mh small { color: var(--dim); font-weight: 600; font-size: 12px; }
   .rt-me .mb { padding: 0 12px 9px; font-size: 12.5px; line-height: 1.5; color: var(--dim); }
   .rt-me .mb b { color: var(--ink); }
@@ -119,6 +119,18 @@
   .rt-big[disabled] { opacity: .45; cursor: default; }
   .rt-small { padding: 10px; border-radius: 12px; border: 1.5px solid var(--line2); background: var(--soft); color: inherit; font-family: inherit; font-size: 13.5px; font-weight: 800; cursor: pointer; }
   .rt-small.on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, var(--card-solid)); }
+  .rt-gsum { font-size: 15px; margin-bottom: 6px; }
+  .rt-gcard .gt, .gt { font-size: 13px; font-weight: 900; margin: 12px 0 6px; }
+  .rt-rules { margin: 0; padding-left: 18px; font-size: 13px; line-height: 1.6; color: var(--dim); }
+  .rt-rules b { color: var(--ink); }
+  .rt-gr { border: 1.5px solid var(--rc, var(--line2)); border-radius: 12px; padding: 8px 10px; margin-bottom: 6px; background: color-mix(in srgb, var(--rc, #94a3b8) 8%, var(--card-solid)); }
+  .rt-gr.off { opacity: .5; border-style: dashed; background: var(--soft); }
+  .rt-gr.mine { box-shadow: 0 0 0 2px var(--accent); }
+  .rt-gr .gh { display: flex; justify-content: space-between; align-items: center; gap: 6px; }
+  .rt-gr .gn { font-weight: 900; font-size: 14.5px; } .rt-gr .gn i { font-style: normal; color: var(--accent); font-size: 12px; }
+  .rt-gr .gb { font-size: 11.5px; font-weight: 800; white-space: nowrap; } .rt-gr .gb.on { color: #34d399; } .rt-gr .gb.off { color: var(--dim); }
+  .rt-gr .gd { font-size: 12.5px; line-height: 1.5; margin-top: 4px; }
+  .rt-gr .ga { font-size: 11.5px; color: var(--dim); margin-top: 3px; }
   .rt-end h2 { margin-bottom: 4px; }
   .rt-end .rs { font-size: 13.5px; color: var(--dim); line-height: 1.5; }
   `;
@@ -138,19 +150,13 @@
     <div class="rt-cap" id="rt-cap"></div>
     <div class="card" id="rt-end" hidden></div>
     <div class="rt-tabs" id="rt-tabs"></div>
-    <div class="card" id="rt-talk">
-      <div class="rt-feed" id="rt-feed"></div>
-      <div class="rt-input" id="rt-input">
-        <input type="text" id="rt-text" maxlength="100" placeholder="한마디 해 보세요 (최대 100자)" autocomplete="off">
-        <button class="btn primary" id="rt-send" type="button">보내기</button>
-      </div>
-    </div>
-    <div class="card" id="rt-hcard" hidden><div class="rt-hist" id="rt-hist"></div></div>
+    <div class="card" id="rt-hcard"><div class="rt-hist" id="rt-hist"></div></div>
+    <div class="card" id="rt-gcard" hidden></div>
     <div class="card rt-bar" id="rt-bar"></div>
   </div>`;
 
-  let ctx = null, cur = null, timer = null, roleTimer = null;
-  let pick = [], pickKey = '', target = null, roleShown = false, tab = 'talk';
+  let ctx = null, cur = null, timer = null;
+  let pick = [], pickKey = '', target = null, tab = 'hist';
   let sig = {};
 
   const esc = (s) => ctx.esc(s);
@@ -182,7 +188,7 @@
     const hint = G.quests.some((x) => x.need > 1) ? ' · ⚠️2 = 이 원정은 실패 카드 2장이어야 실패' : '';
     const dots = Array.from({ length: G.maxReject }, (_, i) => `<span class="rt-dot${i < G.rejects ? ' on' : ''}"></span>`).join('');
     const skipBtn = me && (G.phase === 'team' || G.phase === 'talk') ? `<button class="rt-skip${me.skip ? ' on' : ''}" type="button" data-act="skip">⏭️ ${G.phase === 'team' ? '팀 자동 구성' : '투표로 넘어가기'} ${skipN}/${G.skipNeed}${me.skip ? ' ✓' : ''}</button>` : '';
-    $('#rt-top').innerHTML = `<div class="rt-trow"><span class="ph">${PHASE[G.phase] || ''}</span>${skipBtn}</div><div class="rt-track">${q}</div><div class="rt-rej2">연속 부결 ${dots}<span>(${G.maxReject}번이면 악 승리)${hint}</span></div>`;
+    $('#rt-top').innerHTML = `<div class="rt-trow"><span class="ph">${PHASE[G.phase] || ''}${G.phase === 'vote' ? ' <span class="rt-tm rt-vtm" style="font-size:15px;margin-left:6px"></span>' : ''}</span>${skipBtn}</div><div class="rt-track">${q}</div><div class="rt-rej2">연속 부결 ${dots}<span>(${G.maxReject}번이면 악 승리)${hint}</span></div>`;
   }
 
   /* ───── 내 역할 (항상 보여요) ───── */
@@ -215,8 +221,8 @@
     if (G.phase === 'team') {
       return `<div class="big">👑 ${esc(leader ? leader.name : '?')}</div><div class="sub">${isLeader() ? `팀원 ${G.size}명을 탭해서 고르세요<br><b>${pick.length}/${G.size}</b> 선택됨` : `${G.size}명의 원정대를 고르는 중`}</div>`;
     }
-    if (G.phase === 'talk') return `<div class="big">💬 토론</div><div class="sub">⚔️ 표시된 사람이 원정대예요<br>스킵 ${live.filter((s) => s.skip).length}/${G.skipNeed}</div>`;
-    if (G.phase === 'vote') return `<div class="big">🗳️ 이 팀 OK?</div><div class="sub">투표 ${live.filter((s) => s.voted).length}/${live.length}<br>전원이 고르면 한꺼번에 공개!</div>`;
+    if (G.phase === 'talk') return `<div class="big">💬 토론</div><div class="sub">⚔️ 표시된 사람이 원정대예요<br>아래 <b>채팅</b> 탭에서 이야기해요<br>스킵 ${live.filter((s) => s.skip).length}/${G.skipNeed}</div>`;
+    if (G.phase === 'vote') return `<div class="big">🗳️ 이 팀 OK?</div><div class="sub">투표 ${live.filter((s) => s.voted).length}/${live.length}<br>⏱ <b class="rt-vtm"></b></div>`;
     if (G.phase === 'voteReveal' && h) {
       const step = live.length > 6 ? 0.3 : 0.45;
       const d = live.length * step + 0.4;
@@ -292,7 +298,7 @@
     const leader = seatById(G.leaderId);
     if (!me) return '';
     if (G.phase === 'team' && isLeader()) return `<div class="rt-bt"><span>👑 내가 대장! 원탁에서 ${G.size}명을 탭하세요</span></div><div class="rt-bb one"><button class="rt-big go" type="button" data-act="go" ${pick.length === G.size ? '' : 'disabled'}>이 팀으로 확정 (${pick.length}/${G.size})</button></div>`;
-    if (G.phase === 'vote') return `<div class="rt-bt"><span>👑 ${esc(leader ? leader.name : '?')}님의 팀, 승인할까요?</span></div><div class="rt-bb"><button class="rt-big yes${me.vote === 'yes' ? ' on' : ''}" type="button" data-act="vote" data-v="yes">👍 찬성</button><button class="rt-big no${me.vote === 'no' ? ' on' : ''}" type="button" data-act="vote" data-v="no">👎 반대</button></div>`;
+    if (G.phase === 'vote') return `<div class="rt-bt"><span>👑 ${esc(leader ? leader.name : '?')}님의 팀, 승인할까요?</span><span class="rt-tm rt-vtm"></span></div><div class="rt-bb"><button class="rt-big yes${me.vote === 'yes' ? ' on' : ''}" type="button" data-act="vote" data-v="yes">👍 찬성</button><button class="rt-big no${me.vote === 'no' ? ' on' : ''}" type="button" data-act="vote" data-v="no">👎 반대</button></div>`;
     if (G.phase === 'mission' && me.onTeam) return `<div class="rt-bt"><span>⚔️ 비밀 카드를 내세요 ${me.card ? '(바꿀 수 있어요)' : ''}</span></div><div class="rt-bb"><button class="rt-big yes${me.card === 'success' ? ' on' : ''}" type="button" data-act="card" data-v="success">🌟 성공</button>${me.team === 'evil' ? `<button class="rt-big no${me.card === 'fail' ? ' on' : ''}" type="button" data-act="card" data-v="fail">💥 실패</button>` : '<button class="rt-big no" type="button" disabled>💥 실패<br><small>악만 가능</small></button>'}</div>`;
     if (G.phase === 'assassin' && me.role === 'assassin') {
       const t = target ? seatById(target) : null;
@@ -324,25 +330,37 @@
     el.innerHTML = `<div class="rt-end"><h2>${head}${mine && mine.gain ? ` <small style="color:#34d399">+${mine.gain}점</small>` : ''}</h2><div class="rs">${esc(R.why)}<br>위 원탁에서 모두의 역할을 확인하세요.</div></div>`;
   }
 
-  /* ───── 토론 / 기록 탭 ───── */
+  /* ───── 기록 / 규칙·직업 탭 ───── */
   function renderTabs() {
     const { G } = cur;
     if (!changed('tabs', [tab, G.history.length])) return;
-    $('#rt-tabs').innerHTML = `<button class="rt-tab${tab === 'talk' ? ' on' : ''}" type="button" data-act="tab" data-tab="talk">💬 토론</button><button class="rt-tab${tab === 'hist' ? ' on' : ''}" type="button" data-act="tab" data-tab="hist">📜 기록 (${G.history.length})</button>`;
-    $('#rt-talk').hidden = tab !== 'talk';
+    $('#rt-tabs').innerHTML = `<button class="rt-tab${tab === 'hist' ? ' on' : ''}" type="button" data-act="tab" data-tab="hist">📜 기록 (${G.history.length})</button><button class="rt-tab${tab === 'guide' ? ' on' : ''}" type="button" data-act="tab" data-tab="guide">📖 규칙 · 직업</button>`;
     $('#rt-hcard').hidden = tab !== 'hist';
-    if (tab === 'talk') { sig.feed = ''; renderFeed(); }
+    $('#rt-gcard').hidden = tab !== 'guide';
   }
 
-  function renderFeed() {
-    const { G } = cur;
-    const items = G.talk.filter((m) => m.r === G.round || G.phase === 'assassin' || G.phase === 'ended');
-    if (!changed('feed', [G.round, G.phase, items.length, items.length ? items[items.length - 1].n : 0, tab])) return;
-    const el = $('#rt-feed');
-    el.innerHTML = items.length ? items.map((m) => `<div>${col(seatById(m.id))} ${esc(m.text)}</div>`).join('') : '<div class="rt-empty">아직 아무도 말하지 않았어요. 먼저 의견을 던져 보세요!</div>';
-    el.scrollTop = el.scrollHeight;
-    const row = $('#rt-input');
-    if (row) row.hidden = !G.me || G.phase === 'ended';
+  const ROLE_ORDER = ['merlin', 'percival', 'servant', 'morgana', 'assassin', 'mordred', 'oberon', 'minion'];
+  const APPEAR = { merlin: '항상', percival: '항상', servant: '항상 (인원이 늘면 장수가 늘어요)', morgana: '항상', assassin: '항상', mordred: '9명 · 10명일 때', oberon: '7명 · 10명일 때', minion: '8명일 때' };
+
+  function renderGuide() {
+    const { S, G } = cur;
+    if (!changed('guide', [G.roleCounts, G.seats.length, G.me && G.me.role, tab])) return;
+    const n = G.seats.length;
+    const cnt = G.roleCounts || {};
+    const good = ROLE_ORDER.filter((k) => G.roles[k].team === 'good').reduce((a, k) => a + (cnt[k] || 0), 0);
+    const evil = n - good;
+    const row = (k) => {
+      const r = G.roles[k];
+      const c = cnt[k] || 0;
+      const on = c > 0;
+      const mine = G.me && G.me.role === k;
+      return `<div class="rt-gr${on ? '' : ' off'}${mine ? ' mine' : ''}" style="--rc:${TCOLOR[r.team]}"><div class="gh"><span class="gn">${r.emoji} ${esc(r.name)}${mine ? ' <i>(나)</i>' : ''}</span><span class="gb ${on ? 'on' : 'off'}">${on ? `✅ 이번 판 등장${c > 1 ? ` ×${c}` : ''}` : '⛔ 이번 판 없음'}</span></div><div class="gd">${esc(r.desc)}</div><div class="ga">등장: ${APPEAR[k]}</div></div>`;
+    };
+    const part = (team, title) => `<div class="gt" style="color:${TCOLOR[team]}">${title}</div>${ROLE_ORDER.filter((k) => G.roles[k].team === team).sort((a, b) => ((cnt[b] || 0) > 0) - ((cnt[a] || 0) > 0)).map(row).join('')}`;
+    $('#rt-gcard').innerHTML = `<div class="rt-gsum">이번 판 <b>${n}명</b> · 선 <b style="color:${TCOLOR.good}">${good}</b> : 악 <b style="color:${TCOLOR.evil}">${evil}</b></div>
+      <div class="gt">📜 규칙 요약</div>
+      <ul class="rt-rules"><li>원정 5번 중 먼저 <b>3번 성공</b>하면 선, <b>3번 실패</b>하면 악이 이겨요.</li><li><b>대장</b>이 돌아가며 팀을 고르고, 전원이 <b>공개 투표</b>로 승인해요. 찬성이 반대보다 많아야 승인(동수는 부결). 연속 <b>5번 부결</b>이면 악 승리.</li><li>승인된 팀원만 비밀 카드를 내요. 선은 성공만, 악은 성공/실패. <b>실패 카드가 나오면 실패</b>예요. (7명 이상은 4번 원정만 2장)</li><li>선이 3번 성공해도 <b>암살자가 예언자를 맞히면</b> 악의 역전승!</li><li><b>투표는 5분 제한</b>, 안 고른 사람은 찬성 처리돼요. 이야기는 아래 <b>💬 채팅</b> 탭에서 해요.</li></ul>
+      ${part('good', '🛡️ 선(기사단)')}${part('evil', '🗡️ 악(밀정)')}`;
   }
 
   function renderHist() {
@@ -370,7 +388,7 @@
   }
 
   function renderAll() {
-    renderVer(); renderTop(); renderMe(); renderTable(); renderCap(); renderBar(); renderEnd(); renderTabs(); renderFeed(); renderHist(); tick();
+    renderVer(); renderTop(); renderMe(); renderTable(); renderCap(); renderBar(); renderEnd(); renderTabs(); renderHist(); renderGuide(); tick();
   }
 
   /* ───── 입력 처리 (눌림은 한곳에서 받아요) ───── */
@@ -394,29 +412,26 @@
     else if (act === 'kill') { if (target) ctx.act('assassinate', { target }); }
   }
 
-  function send() {
-    const input = $('#rt-text');
-    if (!input) return;
-    const text = String(input.value || '').trim();
-    if (!text) return;
-    input.value = '';
-    ctx.act('say', { text });
+  function tick() {
+    if (!cur) return;
+    const { G } = cur;
+    const left = G.endsAt && G.phase === 'vote' ? G.endsAt - ctx.now() : 0;
+    document.querySelectorAll('.rt-vtm').forEach((t) => {
+      t.textContent = G.phase === 'vote' && G.endsAt ? fmt(left) : '';
+      if (t.classList && t.classList.toggle) t.classList.toggle('warn', left <= 30000);
+    });
   }
-
-  function tick() { /* 제한 시간이 없어서 할 일이 없어요 */ }
 
   window.GAME_UI.roundtable = {
     mount(c) {
       ctx = c;
       cur = null;
-      pick = []; pickKey = ''; target = null; roleShown = false; tab = 'talk'; sig = {};
+      pick = []; pickKey = ''; target = null; tab = 'hist'; sig = {};
       ctx.host().innerHTML = TEMPLATE;
       const root = $('#rt-root');
       if (root) root.addEventListener('click', onClick);
-      const input = $('#rt-text');
-      const btn = $('#rt-send');
-      if (btn) btn.addEventListener('click', send);
-      if (input) input.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); send(); } });
+      clearInterval(timer);
+      timer = setInterval(tick, 500);
     },
     update(S, G) {
       cur = { S, G };
@@ -426,7 +441,6 @@
     },
     unmount() {
       clearInterval(timer);
-      clearTimeout(roleTimer);
       timer = null;
       cur = null;
     },
