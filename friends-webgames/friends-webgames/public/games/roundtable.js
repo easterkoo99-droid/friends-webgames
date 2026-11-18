@@ -7,7 +7,7 @@
 (() => {
   'use strict';
   window.GAME_UI = window.GAME_UI || {};
-  const VER = 3;   // 서버 파일(games/roundtable.js)의 VERSION 과 같아야 해요. 다르면 화면에 안내가 떠요
+  const VER = 4;   // 서버 파일(games/roundtable.js)의 VERSION 과 같아야 해요. 다르면 화면에 안내가 떠요
   const $ = (s) => document.querySelector(s);
 
   const CSS = `
@@ -31,12 +31,17 @@
   .rt-q.success b { color: #34d399; }
   .rt-q.fail { border-color: #f43f5e; background: color-mix(in srgb, #f43f5e 18%, var(--card-solid)); }
   .rt-q.fail b { color: #f43f5e; }
-  /* 내 역할 (눌러서 확인, 6초 뒤 자동으로 숨겨요) */
+  .rt-skip { padding: 8px 11px; border-radius: 12px; border: 1.5px solid var(--accent); background: var(--soft); color: inherit; font-family: inherit; font-weight: 800; font-size: 13px; cursor: pointer; white-space: nowrap; }
+  .rt-skip.on { background: color-mix(in srgb, var(--accent) 22%, var(--card-solid)); }
+  .rt-rej2 { margin-top: 8px; font-size: 12px; color: var(--dim); display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+  /* 내 역할 (항상 보여요) */
   .rt-me { border: 2px solid var(--rc, var(--line2)); border-radius: var(--r-lg); background: color-mix(in srgb, var(--rc, #94a3b8) 9%, var(--card-solid)); padding: 0; overflow: hidden; }
-  .rt-me .mh { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; padding: 9px 12px; background: none; border: 0; color: inherit; font-family: inherit; font-size: 14px; font-weight: 800; cursor: pointer; text-align: left; }
+  .rt-me .mh { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; padding: 8px 12px 4px; font-size: 14px; font-weight: 800; text-align: left; }
+  .rt-me .mh { flex-wrap: wrap; }
+  .rt-me .mh small { min-width: 0; }
   .rt-me .mh small { color: var(--dim); font-weight: 600; font-size: 12px; }
-  .rt-me .mb { padding: 0 12px 10px; font-size: 13.5px; line-height: 1.55; }
-  .rt-me .mb b { font-size: 16px; }
+  .rt-me .mb { padding: 0 12px 9px; font-size: 12.5px; line-height: 1.5; color: var(--dim); }
+  .rt-me .mb b { color: var(--ink); }
   .rt-me .lg { margin-top: 6px; color: var(--dim); font-size: 12.5px; }
   /* 원탁 */
   .rt-table { position: relative; height: 330px; border-radius: 28px; background: radial-gradient(ellipse at center, color-mix(in srgb, var(--accent) 12%, var(--card-solid)) 0%, var(--card-solid) 70%); border: 1px solid var(--line); }
@@ -166,33 +171,33 @@
   };
   const lastHist = () => { const h = cur.G.history; return h.length ? h[h.length - 1] : null; };
 
-  /* ───── 위쪽: 원정 트랙 ───── */
+  /* ───── 위쪽: 원정 트랙 + 스킵 ───── */
   function renderTop() {
     const { G } = cur;
-    if (!changed('top', [G.round, G.phase, G.rejects, G.quests])) return;
+    const me = G.me;
+    const live = G.seats.filter((s) => !s.left);
+    const skipN = live.filter((s) => s.skip).length;
+    if (!changed('top', [G.round, G.phase, G.rejects, G.quests, me && me.skip, skipN, G.skipNeed])) return;
     const q = G.quests.map((x, i) => `<div class="rt-q${x.result ? ` ${x.result}` : ''}${i + 1 === G.round && G.phase !== 'ended' && !x.result ? ' cur' : ''}"><span>${i + 1}번 원정</span><b>${x.result === 'success' ? '✔' : x.result === 'fail' ? '✖' : x.size}</b><span>${x.result === 'fail' ? `실패 ${x.fails}장` : x.result === 'success' ? (x.fails ? `성공(실패${x.fails})` : '성공') : `${x.size}명${x.need > 1 ? ' ⚠️2' : ''}`}</span></div>`).join('');
-    const hint = G.quests.some((x) => x.need > 1) ? '<div class="rt-qhint">⚠️2 = 이 원정은 실패 카드 <b>2장</b>이 나와야 실패예요</div>' : '';
+    const hint = G.quests.some((x) => x.need > 1) ? ' · ⚠️2 = 이 원정은 실패 카드 2장이어야 실패' : '';
     const dots = Array.from({ length: G.maxReject }, (_, i) => `<span class="rt-dot${i < G.rejects ? ' on' : ''}"></span>`).join('');
-    $('#rt-top').innerHTML = `<div class="rt-trow"><span class="ph">${PHASE[G.phase] || ''}</span><span class="rt-rej" title="연속 부결">부결 ${dots}</span></div><div class="rt-track">${q}</div>${hint}`;
+    const skipBtn = me && (G.phase === 'team' || G.phase === 'talk') ? `<button class="rt-skip${me.skip ? ' on' : ''}" type="button" data-act="skip">⏭️ ${G.phase === 'team' ? '팀 자동 구성' : '투표로 넘어가기'} ${skipN}/${G.skipNeed}${me.skip ? ' ✓' : ''}</button>` : '';
+    $('#rt-top').innerHTML = `<div class="rt-trow"><span class="ph">${PHASE[G.phase] || ''}</span>${skipBtn}</div><div class="rt-track">${q}</div><div class="rt-rej2">연속 부결 ${dots}<span>(${G.maxReject}번이면 악 승리)${hint}</span></div>`;
   }
 
-  /* ───── 내 역할 ───── */
+  /* ───── 내 역할 (항상 보여요) ───── */
   function renderMe() {
     const { G } = cur;
     const me = G.me;
-    if (!changed('me', [me && [me.role, me.peek], roleShown])) return;
+    if (!changed('me', [me && [me.role, me.peek], G.roles && me && G.roles[me.role]])) return;
     const el = $('#rt-me');
     if (!me) { el.hidden = true; el.innerHTML = ''; return; }
     el.hidden = false;
     const R = G.roles[me.role];
     el.style.setProperty('--rc', TCOLOR[me.team]);
-    if (!roleShown) {
-      el.innerHTML = `<button class="mh" type="button" data-act="role"><span>🔒 내 역할 확인하기</span><small>눌러서 보기 (6초 뒤 자동으로 가려져요)</small></button>`;
-      return;
-    }
     let legend = '';
-    if (me.peek && me.peek.ids.length) legend = `<div class="lg">원탁에 표시된 <b>${me.role === 'percival' ? '❓' : '😈'}</b> = ${esc(me.peek.label)}</div>`;
-    el.innerHTML = `<button class="mh" type="button" data-act="role"><span>${R.emoji} 나는 <b>${esc(R.name)}</b> · ${me.team === 'good' ? '선(기사단)' : '악(밀정)'}</span><small>눌러서 가리기</small></button><div class="mb">${esc(R.desc)}${legend}</div>`;
+    if (me.peek && me.peek.ids.length) legend = `<div class="lg">원탁의 ${me.role === 'percival' ? '❓' : '😈'} = <b>${esc(me.peek.label)}</b></div>`;
+    el.innerHTML = `<div class="mh"><span>${R.emoji} 나는 <b>${esc(R.name)}</b> · ${me.team === 'good' ? '선(기사단)' : '악(밀정)'}</span><small>${esc(R.brief)}</small></div><div class="mb">${esc(R.desc)}${legend}</div>`;
   }
 
   /* ───── 원탁 ───── */
@@ -240,7 +245,7 @@
     const { S, G } = cur;
     const h = lastHist();
     const showVotes = G.phase === 'voteReveal' && h;
-    const peekIds = roleShown && G.me && G.me.peek ? G.me.peek.ids : [];
+    const peekIds = G.me && G.me.peek ? G.me.peek.ids : [];
     const state = [G.phase, G.round, G.rejects, G.leaderId, G.team, G.seats.map((s) => [s.id, s.voted, s.carded, s.skip, s.left]), showVotes ? h.votes : null, G.reveal, G.result, G.me && G.me.role, peekIds, pick, target, selectable()];
     if (!changed('table', state)) return;
     const el = $('#rt-table');
@@ -280,48 +285,30 @@
     $('#rt-cap').textContent = hide || !G.last ? '' : G.last.text;
   }
 
-  /* ───── 아래 고정 바: 지금 할 일 ───── */
+  /* ───── 아래 고정 바: 꼭 눌러야 할 때만 나와요 ───── */
   function barHtml() {
     const { S, G } = cur;
     const me = G.me;
-    const live = G.seats.filter((s) => !s.left);
     const leader = seatById(G.leaderId);
-    const skipN = live.filter((s) => s.skip).length;
-    const tm = '<span class="rt-tm" id="rt-tm"></span>';
-    const skipBtn = me ? `<button class="rt-small${me.skip ? ' on' : ''}" type="button" data-act="skip">⏭️ 스킵 ${skipN}/${G.skipNeed}${me.skip ? ' (취소)' : ''}</button>` : '';
-    if (G.phase === 'team') {
-      if (isLeader()) return `<div class="rt-bt"><span>👑 내가 대장! 원탁에서 ${G.size}명을 탭하세요</span>${tm}</div><div class="rt-bb"><button class="rt-big go" type="button" data-act="go" ${pick.length === G.size ? '' : 'disabled'}>이 팀으로 확정 (${pick.length}/${G.size})</button>${skipBtn}</div>`;
-      return `<div class="rt-bt"><span>👑 ${esc(leader ? leader.name : '?')}님이 팀을 고르는 중…</span>${tm}</div>${me ? `<div class="rt-bb one">${skipBtn}</div>` : ''}`;
-    }
-    if (G.phase === 'talk') return `<div class="rt-bt"><span>💬 토론하고 투표하세요</span>${tm}</div>${me ? `<div class="rt-bb"><button class="rt-big go" type="button" data-act="skip">${me.skip ? '⏭️ 스킵 취소' : '🗳️ 투표하러 가기'}</button><div style="align-self:center;text-align:center;font-size:13px;color:var(--dim)">${skipN}/${G.skipNeed}명이 누르면<br>바로 투표해요</div></div>` : ''}`;
-    if (G.phase === 'vote') {
-      if (!me) return `<div class="rt-bt"><span>🗳️ 투표 중</span>${tm}</div>`;
-      return `<div class="rt-bt"><span>👑 ${esc(leader ? leader.name : '?')}님의 팀, 승인할까요?</span>${tm}</div><div class="rt-bb"><button class="rt-big yes${me.vote === 'yes' ? ' on' : ''}" type="button" data-act="vote" data-v="yes">👍 찬성</button><button class="rt-big no${me.vote === 'no' ? ' on' : ''}" type="button" data-act="vote" data-v="no">👎 반대</button></div>`;
-    }
-    if (G.phase === 'voteReveal') return `<div class="rt-bt"><span>🗳️ 투표 결과 공개 중…</span></div>`;
-    if (G.phase === 'mission') {
-      if (me && me.onTeam) return `<div class="rt-bt"><span>⚔️ 비밀 카드를 내세요 ${me.card ? '(바꿀 수 있어요)' : ''}</span>${tm}</div><div class="rt-bb"><button class="rt-big yes${me.card === 'success' ? ' on' : ''}" type="button" data-act="card" data-v="success">🌟 성공</button>${me.team === 'evil' ? `<button class="rt-big no${me.card === 'fail' ? ' on' : ''}" type="button" data-act="card" data-v="fail">💥 실패</button>` : '<button class="rt-big no" type="button" disabled>💥 실패<br><small>악만 가능</small></button>'}</div>`;
-      return `<div class="rt-bt"><span>⚔️ 원정대가 카드를 내는 중…</span>${tm}</div>`;
-    }
-    if (G.phase === 'missionReveal') return `<div class="rt-bt"><span>⚔️ 카드를 공개해요…</span></div>`;
-    if (G.phase === 'assassin') {
-      if (me && me.role === 'assassin') {
-        const t = target ? seatById(target) : null;
-        return `<div class="rt-bt"><span>🗡️ 예언자를 찾아 탭하세요</span>${tm}</div><div class="rt-bb one"><button class="rt-big go" type="button" data-act="kill" ${t ? '' : 'disabled'}>${t ? `🗡️ ${esc(t.name)}님을 지목 (확정)` : '원탁에서 한 명을 탭하세요'}</button></div>`;
-      }
-      return `<div class="rt-bt"><span>🗡️ 암살자가 예언자를 지목하는 중…</span>${tm}</div>`;
+    if (!me) return '';
+    if (G.phase === 'team' && isLeader()) return `<div class="rt-bt"><span>👑 내가 대장! 원탁에서 ${G.size}명을 탭하세요</span></div><div class="rt-bb one"><button class="rt-big go" type="button" data-act="go" ${pick.length === G.size ? '' : 'disabled'}>이 팀으로 확정 (${pick.length}/${G.size})</button></div>`;
+    if (G.phase === 'vote') return `<div class="rt-bt"><span>👑 ${esc(leader ? leader.name : '?')}님의 팀, 승인할까요?</span></div><div class="rt-bb"><button class="rt-big yes${me.vote === 'yes' ? ' on' : ''}" type="button" data-act="vote" data-v="yes">👍 찬성</button><button class="rt-big no${me.vote === 'no' ? ' on' : ''}" type="button" data-act="vote" data-v="no">👎 반대</button></div>`;
+    if (G.phase === 'mission' && me.onTeam) return `<div class="rt-bt"><span>⚔️ 비밀 카드를 내세요 ${me.card ? '(바꿀 수 있어요)' : ''}</span></div><div class="rt-bb"><button class="rt-big yes${me.card === 'success' ? ' on' : ''}" type="button" data-act="card" data-v="success">🌟 성공</button>${me.team === 'evil' ? `<button class="rt-big no${me.card === 'fail' ? ' on' : ''}" type="button" data-act="card" data-v="fail">💥 실패</button>` : '<button class="rt-big no" type="button" disabled>💥 실패<br><small>악만 가능</small></button>'}</div>`;
+    if (G.phase === 'assassin' && me.role === 'assassin') {
+      const t = target ? seatById(target) : null;
+      return `<div class="rt-bt"><span>🗡️ 예언자를 찾아 탭하세요</span></div><div class="rt-bb one"><button class="rt-big go" type="button" data-act="kill" ${t ? '' : 'disabled'}>${t ? `🗡️ ${esc(t.name)}님을 지목 (확정)` : '원탁에서 한 명을 탭하세요'}</button></div>`;
     }
     return '';
   }
 
   function renderBar() {
-    const { S, G } = cur;
+    const { G } = cur;
     const me = G.me;
     const el = $('#rt-bar');
-    if (G.phase === 'ended') { el.hidden = true; el.innerHTML = ''; sig.bar = ''; return; }
-    el.hidden = false;
-    if (!changed('bar', [G.phase, G.round, G.rejects, G.leaderId, G.size, G.team, G.seats.map((s) => [s.voted, s.carded, s.skip, s.left]), me && [me.vote, me.card, me.skip, me.onTeam, me.role], pick, target])) return;
-    el.innerHTML = barHtml();
+    if (!changed('bar', [G.phase, G.round, G.rejects, G.leaderId, G.size, G.team, me && [me.vote, me.card, me.onTeam, me.role], pick, target])) return;
+    const html = G.phase === 'ended' ? '' : barHtml();
+    el.hidden = !html;
+    el.innerHTML = html;
   }
 
   /* ───── 끝났을 때 ───── */
@@ -393,12 +380,7 @@
     if (!t) return;
     const { G, S } = cur;
     const act = t.getAttribute('data-act');
-    if (act === 'role') {
-      roleShown = !roleShown;
-      clearTimeout(roleTimer);
-      if (roleShown) roleTimer = setTimeout(() => { roleShown = false; if (cur) renderAll(); }, 6000);
-      renderAll();
-    } else if (act === 'tab') { tab = t.getAttribute('data-tab'); renderAll(); }
+    if (act === 'tab') { tab = t.getAttribute('data-tab'); renderAll(); }
     else if (act === 'seat') {
       if (!selectable()) return;
       const id = t.getAttribute('data-id');
@@ -421,16 +403,7 @@
     ctx.act('say', { text });
   }
 
-  function tick() {
-    if (!cur) return;
-    const { G } = cur;
-    const left = G.endsAt ? G.endsAt - ctx.now() : 0;
-    const t = $('#rt-tm');
-    if (t) {
-      t.textContent = G.endsAt ? fmt(left) : '';
-      if (t.classList && t.classList.toggle) t.classList.toggle('warn', left <= 30000);
-    }
-  }
+  function tick() { /* 제한 시간이 없어서 할 일이 없어요 */ }
 
   window.GAME_UI.roundtable = {
     mount(c) {
@@ -444,8 +417,6 @@
       const btn = $('#rt-send');
       if (btn) btn.addEventListener('click', send);
       if (input) input.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); send(); } });
-      clearInterval(timer);
-      timer = setInterval(tick, 500);
     },
     update(S, G) {
       cur = { S, G };
